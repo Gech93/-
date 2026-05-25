@@ -113,16 +113,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted } from 'vue'
+import { ref, computed, nextTick, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePersonaStore } from '../stores/persona'
 import { useConversation } from '../stores/conversation'
+import type { Message } from '../stores/conversation'
 
 const router = useRouter()
 const personaStore = usePersonaStore()
 const conversation = useConversation()
 
-const messages = ref<any[]>([])
+const messages = ref<Message[]>([])
 const inputText = ref('')
 const isDecisionMode = ref(false)
 const showDecisionInfo = ref(false)
@@ -133,14 +134,33 @@ const activePersonaName = computed(() => personaStore.activePersona?.name || '�
 const activePersonaMbti = computed(() => personaStore.activePersona?.complementMbti || 'AI')
 
 onMounted(() => {
-  // 初始化对话
-  if (personaStore.activePersona) {
-    const convId = conversation.currentConversationId
-    if (convId) {
-      messages.value = conversation.getConversation(convId)
-    }
-  }
+  initConversation()
 })
+
+watch(() => conversation.currentConversationId, () => {
+  loadMessages()
+})
+
+function initConversation() {
+  if (!personaStore.activePersona) {
+    router.push('/chat')
+    return
+  }
+  
+  // 如果没有当前对话，创建一个
+  if (!conversation.currentConversationId) {
+    conversation.createConversation(personaStore.activePersona.id)
+  }
+  
+  loadMessages()
+}
+
+function loadMessages() {
+  if (conversation.currentConversationId) {
+    messages.value = conversation.getConversation(conversation.currentConversationId)
+    scrollToBottom()
+  }
+}
 
 function formatTime(date: Date | string): string {
   const d = new Date(date)
@@ -155,43 +175,27 @@ function toggleDecisionMode() {
 }
 
 function showSettings() {
-  alert('设置功能开发中...')
+  router.push('/settings')
 }
 
 async function sendMessage() {
   if (!inputText.value.trim() || !personaStore.activePersona) return
-
-  // 确保有对话
-  if (!conversation.currentConversationId) {
-    conversation.createConversation(personaStore.activePersona.id)
-  }
 
   const text = inputText.value
   inputText.value = ''
   isTyping.value = true
 
   try {
-    // 添加用户消息
-    const userMsg = {
-      id: Date.now().toString(),
-      role: 'user' as const,
-      content: text,
-      timestamp: new Date(),
-      isDecisionMode: isDecisionMode.value,
-    }
-    messages.value.push(userMsg)
-    scrollToBottom()
-
-    // 使用 store 发送消息
+    // 使用store发送消息
     const aiMsg = await conversation.sendMessage(text, isDecisionMode.value)
-    messages.value.push(aiMsg)
+    // 重新加载消息
+    loadMessages()
   } catch (error) {
     console.error('发送消息失败:', error)
+    alert('消息发送失败，请稍后重试')
   } finally {
     isTyping.value = false
   }
-
-  scrollToBottom()
 }
 
 function scrollToBottom() {

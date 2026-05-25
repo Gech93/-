@@ -9,6 +9,12 @@ interface PrivacySettings {
   dataRetentionDays: number
 }
 
+// API设置类型
+interface APISettings {
+  deepseekApiKey: string
+  useMockAI: boolean
+}
+
 export const useSettingsStore = defineStore('settings', () => {
   // 状态
   const privacySettings = ref<PrivacySettings>({
@@ -18,12 +24,26 @@ export const useSettingsStore = defineStore('settings', () => {
     dataRetentionDays: 365,
   })
   
+  const apiSettings = ref<APISettings>({
+    deepseekApiKey: '',
+    useMockAI: true, // 默认使用模拟AI
+  })
+  
   const isInitialized = ref(false)
 
   // 更新隐私设置
   function updatePrivacySettings(settings: Partial<PrivacySettings>) {
     privacySettings.value = {
       ...privacySettings.value,
+      ...settings,
+    }
+    saveToStorage()
+  }
+
+  // 更新API设置
+  function updateAPISettings(settings: Partial<APISettings>) {
+    apiSettings.value = {
+      ...apiSettings.value,
       ...settings,
     }
     saveToStorage()
@@ -56,6 +76,10 @@ export const useSettingsStore = defineStore('settings', () => {
         allowPersonalityLearning: true,
         dataRetentionDays: 365,
       }
+      apiSettings.value = {
+        deepseekApiKey: '',
+        useMockAI: true,
+      }
       alert('数据已清除')
       window.location.reload()
     }
@@ -64,21 +88,30 @@ export const useSettingsStore = defineStore('settings', () => {
   // 保存到本地存储
   function saveToStorage() {
     localStorage.setItem('privacy_settings', JSON.stringify(privacySettings.value))
+    localStorage.setItem('api_settings', JSON.stringify(apiSettings.value))
   }
 
   // 从本地存储加载
   function loadFromStorage() {
-    const dataStr = localStorage.getItem('privacy_settings')
-    if (dataStr) {
-      privacySettings.value = JSON.parse(dataStr)
+    const privacyDataStr = localStorage.getItem('privacy_settings')
+    if (privacyDataStr) {
+      privacySettings.value = JSON.parse(privacyDataStr)
     }
+    
+    const apiDataStr = localStorage.getItem('api_settings')
+    if (apiDataStr) {
+      apiSettings.value = JSON.parse(apiDataStr)
+    }
+    
     isInitialized.value = true
   }
 
   return {
     privacySettings,
+    apiSettings,
     isInitialized,
     updatePrivacySettings,
+    updateAPISettings,
     exportData,
     clearAllData,
     loadFromStorage,

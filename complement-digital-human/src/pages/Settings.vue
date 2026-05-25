@@ -5,6 +5,40 @@
     </div>
 
     <div class="settings-section">
+      <p class="section-title">AI设置</p>
+      
+      <div class="setting-item">
+        <div class="setting-left">
+          <span class="setting-icon">🔑</span>
+          <div class="setting-info">
+            <span class="setting-name">DeepSeek API Key</span>
+            <span class="setting-desc">输入你的API密钥以启用真实AI</span>
+          </div>
+        </div>
+        <input
+          type="password"
+          class="api-input"
+          v-model="apiKey"
+          placeholder="输入API Key"
+          @input="handleApiKeyChange"
+        />
+      </div>
+
+      <div class="setting-item">
+        <div class="setting-left">
+          <span class="setting-icon">🤖</span>
+          <div class="setting-info">
+            <span class="setting-name">使用模拟AI</span>
+            <span class="setting-desc">关闭后将使用DeepSeek真实AI</span>
+          </div>
+        </div>
+        <div class="toggle-switch" :class="{ active: settingsStore.apiSettings.useMockAI }" @click="toggleMockAI">
+          <div class="toggle-dot"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
       <p class="section-title">隐私与数据</p>
       
       <div class="setting-item" @click="goToPrivacy">
@@ -38,7 +72,7 @@
           <span class="setting-icon">ℹ️</span>
           <div class="setting-info">
             <span class="setting-name">版本信息</span>
-            <span class="setting-desc">v1.0.0 模拟AI版本</span>
+            <span class="setting-desc">v1.1.0 DeepSeek AI版本</span>
           </div>
         </div>
       </div>
@@ -127,7 +161,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSettingsStore } from '../stores/settings'
 import { usePersonaStore } from '../stores/persona'
@@ -138,6 +172,19 @@ const settingsStore = useSettingsStore()
 const personaStore = usePersonaStore()
 
 const showAbout = ref(false)
+const apiKey = ref('')
+
+onMounted(() => {
+  apiKey.value = settingsStore.apiSettings.deepseekApiKey
+})
+
+function handleApiKeyChange() {
+  settingsStore.updateAPISettings({ deepseekApiKey: apiKey.value })
+}
+
+function toggleMockAI() {
+  settingsStore.updateAPISettings({ useMockAI: !settingsStore.apiSettings.useMockAI })
+}
 
 function goToPrivacy() {
   router.push('/settings/privacy')
@@ -379,5 +426,49 @@ function handleClearData() {
   border-radius: 26px;
   border: none;
   margin-top: 24px;
+}
+
+.api-input {
+  width: 200px;
+  padding: 10px 14px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.api-input:focus {
+  border-color: #667eea;
+}
+
+.toggle-switch {
+  width: 52px;
+  height: 30px;
+  background: #e0e0e0;
+  border-radius: 15px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.toggle-switch.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.toggle-dot {
+  width: 26px;
+  height: 26px;
+  background: #ffffff;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.3s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch.active .toggle-dot {
+  transform: translateX(22px);
 }
 </style>
