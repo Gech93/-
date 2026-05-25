@@ -2,28 +2,39 @@
   <div class="conversation-container">
     <div class="nav-header">
       <button class="nav-left" @click="goBack">←</button>
-      <div class="nav-center" @click="showDecisionInfo = true">
+      <div class="nav-center">
         <span class="persona-name">{{ activePersonaName }}</span>
-        <span class="persona-mode">{{ isDecisionMode ? '决策模式' : '普通模式' }}</span>
+        <span class="persona-mode">{{ personaStore.activePersona?.complementLevel }}% 互补</span>
       </div>
       <button class="nav-right" @click="showSettings">⋮</button>
     </div>
 
     <div class="message-list" ref="messageListRef">
+      <!-- 欢迎消息 -->
       <div class="welcome-message" v-if="messages.length === 0">
         <div class="welcome-avatar">
           <span>{{ activePersonaMbti }}</span>
         </div>
-        <p class="welcome-text">
-          你好！我是{{ activePersonaName }}，一个与你互补的AI伙伴。
-          有什么想聊的，或者需要我做决策参考吗？
-        </p>
+        <div class="welcome-content">
+          <p class="welcome-text">
+            你好！我是{{ activePersonaName }}，一个与你互补的AI伙伴。
+          </p>
+          <p class="welcome-subtitle">
+            今天想聊点什么？或者我可以帮你从不同角度思考问题。
+          </p>
+          <div class="suggestion-chips">
+            <span class="suggestion-chip" @click="quickSend('我最近工作压力有点大，想聊聊')">工作压力</span>
+            <span class="suggestion-chip" @click="quickSend('我需要做一个重要决定')">重要决定</span>
+            <span class="suggestion-chip" @click="quickSend('分享一下今天的心情')">今天心情</span>
+            <span class="suggestion-chip" @click="quickSend('帮我从另一个角度思考问题')">换个角度</span>
+          </div>
+        </div>
       </div>
 
+      <!-- 消息列表 -->
       <div
         v-for="msg in messages"
         :key="msg.id"
-        :id="'msg-' + msg.id"
         class="message-item"
         :class="msg.role"
       >
@@ -36,65 +47,28 @@
         </div>
       </div>
 
+      <!-- 正在输入 -->
       <div class="typing-indicator" v-if="isTyping">
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
-      </div>
-    </div>
-
-    <div class="mode-info-modal" v-if="showDecisionInfo" @click="showDecisionInfo = false">
-      <div class="modal-content" @click.stop>
-        <p class="modal-title">🎯 决策模式说明</p>
-        <div class="modal-section">
-          <p class="section-title">目的</p>
-          <p class="section-text">帮助分析重要决策，提供多角度视角</p>
+        <div class="typing-dots">
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
         </div>
-        <div class="modal-section">
-          <p class="section-title">特点</p>
-          <p class="section-text">• 更结构化的分析框架<br/>• 主动提问关键问题<br/>• 明确区分用户倾向和互补视角</p>
-        </div>
-        <div class="modal-section">
-          <p class="section-title">适用场景</p>
-          <p class="section-text">• 职业选择和发展规划<br/>• 人生重大决定<br/>• 重要人际关系问题</p>
-        </div>
-        <div class="modal-section">
-          <p class="section-title disclaimer">⚠️ 免责声明</p>
-          <p class="section-text">最终决策权在您，我们提供视角而非答案</p>
-        </div>
-        <button class="modal-close" @click="showDecisionInfo = false">我知道了</button>
       </div>
     </div>
 
     <div class="input-section">
-      <div class="mode-toggle">
-        <button
-          class="mode-btn"
-          :class="{ active: !isDecisionMode }"
-          @click="isDecisionMode = false"
-        >
-          💬 普通
-        </button>
-        <button
-          class="mode-btn decision"
-          :class="{ active: isDecisionMode }"
-          @click="toggleDecisionMode"
-        >
-          🎯 决策
-        </button>
-      </div>
-
       <div class="complement-slider" v-if="personaStore.activePersona">
         <span class="slider-label">互补度</span>
         <input
           type="range"
-          :value="personaStore.activePersona.complementLevel"
+          v-model="localComplementLevel"
           :min="0"
           :max="100"
           :step="10"
-          @input="handleComplementChange"
+          @change="handleComplementChange"
         />
-        <span class="slider-value">{{ personaStore.activePersona.complementLevel }}%</span>
+        <span class="slider-value">{{ localComplementLevel }}%</span>
       </div>
 
       <div class="input-row">
@@ -125,8 +99,7 @@ const conversation = useConversation()
 
 const messages = ref<Message[]>([])
 const inputText = ref('')
-const isDecisionMode = ref(false)
-const showDecisionInfo = ref(false)
+const localComplementLevel = ref(50)
 const isTyping = ref(false)
 const messageListRef = ref<HTMLElement | null>(null)
 
@@ -134,6 +107,9 @@ const activePersonaName = computed(() => personaStore.activePersona?.name || '�
 const activePersonaMbti = computed(() => personaStore.activePersona?.complementMbti || 'AI')
 
 onMounted(() => {
+  if (personaStore.activePersona) {
+    localComplementLevel.value = personaStore.activePersona.complementLevel
+  }
   initConversation()
 })
 
@@ -147,7 +123,6 @@ function initConversation() {
     return
   }
   
-  // 如果没有当前对话，创建一个
   if (!conversation.currentConversationId) {
     conversation.createConversation(personaStore.activePersona.id)
   }
@@ -167,15 +142,13 @@ function formatTime(date: Date | string): string {
   return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 }
 
-function toggleDecisionMode() {
-  if (!isDecisionMode.value) {
-    showDecisionInfo.value = true
-  }
-  isDecisionMode.value = !isDecisionMode.value
-}
-
 function showSettings() {
   router.push('/settings')
+}
+
+function quickSend(text: string) {
+  inputText.value = text
+  sendMessage()
 }
 
 async function sendMessage() {
@@ -186,9 +159,9 @@ async function sendMessage() {
   isTyping.value = true
 
   try {
-    // 使用store发送消息
-    const aiMsg = await conversation.sendMessage(text, isDecisionMode.value)
-    // 重新加载消息
+    // 检查是否是决策请求
+    const isDecisionRequest = checkDecisionRequest(text)
+    await conversation.sendMessage(text, isDecisionRequest)
     loadMessages()
   } catch (error) {
     console.error('发送消息失败:', error)
@@ -196,6 +169,15 @@ async function sendMessage() {
   } finally {
     isTyping.value = false
   }
+}
+
+function checkDecisionRequest(text: string): boolean {
+  const decisionKeywords = [
+    '决定', '决策', '选择', '选哪个', '怎么办', '纠结', '犹豫',
+    '帮我选', '给建议', '建议', '帮帮我', '重要决定', '难以抉择',
+    '不知道', '迷茫', '困难', '困惑', '烦恼'
+  ]
+  return decisionKeywords.some(keyword => text.includes(keyword))
 }
 
 function scrollToBottom() {
@@ -206,15 +188,15 @@ function scrollToBottom() {
   })
 }
 
-function handleComplementChange(e: Event) {
-  const target = e.target as HTMLInputElement
-  const level = parseInt(target.value)
+function handleComplementChange() {
   if (!personaStore.activePersona) return
 
+  const level = localComplementLevel.value
   const canModify = personaStore.canModifyComplement(personaStore.activePersona)
   if (!canModify) {
     const remainDays = personaStore.getRemainDays(personaStore.activePersona)
     alert(`每月限修改1次，还剩${remainDays}天`)
+    localComplementLevel.value = personaStore.activePersona.complementLevel
     return
   }
 
@@ -278,6 +260,9 @@ function goBack() {
   display: flex;
   align-items: flex-start;
   margin-bottom: 24px;
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
 }
 
 .welcome-avatar {
@@ -289,19 +274,49 @@ function goBack() {
   align-items: center;
   justify-content: center;
   margin-right: 12px;
+  flex-shrink: 0;
   font-size: 20px;
   font-weight: bold;
   color: #ffffff;
 }
 
-.welcome-text {
+.welcome-content {
   flex: 1;
+}
+
+.welcome-text {
   font-size: 16px;
   color: #666666;
   line-height: 1.6;
-  background: #ffffff;
-  padding: 16px;
-  border-radius: 16px;
+  margin: 0 0 8px 0;
+}
+
+.welcome-subtitle {
+  font-size: 14px;
+  color: #999999;
+  margin: 0 0 16px 0;
+}
+
+.suggestion-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.suggestion-chip {
+  display: inline-block;
+  padding: 8px 16px;
+  background: rgba(102, 126, 234, 0.1);
+  color: #667eea;
+  border-radius: 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.suggestion-chip:hover {
+  background: rgba(102, 126, 234, 0.2);
+  transform: translateY(-2px);
 }
 
 .message-item {
@@ -365,12 +380,16 @@ function goBack() {
 
 .typing-indicator {
   display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.typing-dots {
+  display: flex;
   gap: 6px;
   padding: 16px;
   background: #ffffff;
   border-radius: 16px;
-  width: fit-content;
-  margin-bottom: 20px;
 }
 
 .typing-dot {
@@ -398,102 +417,11 @@ function goBack() {
   }
 }
 
-.mode-info-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 999;
-}
-
-.modal-content {
-  width: 90%;
-  max-width: 400px;
-  background: #ffffff;
-  border-radius: 24px;
-  padding: 32px;
-  max-height: 80vh;
-  overflow-y: auto;
-}
-
-.modal-title {
-  font-size: 22px;
-  font-weight: bold;
-  color: #333333;
-  text-align: center;
-  margin-bottom: 24px;
-}
-
-.modal-section {
-  margin-bottom: 20px;
-}
-
-.section-title {
-  font-size: 16px;
-  font-weight: bold;
-  color: #667eea;
-  margin-bottom: 8px;
-}
-
-.section-title.disclaimer {
-  color: #ff9500;
-}
-
-.section-text {
-  font-size: 14px;
-  color: #666666;
-  line-height: 1.6;
-  white-space: pre-wrap;
-  margin: 0;
-}
-
-.modal-close {
-  width: 100%;
-  height: 48px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #ffffff;
-  font-size: 18px;
-  font-weight: bold;
-  border-radius: 24px;
-  border: none;
-  margin-top: 24px;
-}
-
 .input-section {
   background: #ffffff;
-  padding: 16px;
-  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  padding: 20px;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
-}
-
-.mode-toggle {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.mode-btn {
-  flex: 1;
-  height: 44px;
-  background: #f5f5f5;
-  color: #666666;
-  font-size: 14px;
-  border-radius: 22px;
-  border: none;
-}
-
-.mode-btn.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #ffffff;
-}
-
-.mode-btn.decision.active {
-  background: linear-gradient(135deg, #ff9500 0%, #ff6b00 100%);
 }
 
 .complement-slider {
