@@ -131,10 +131,8 @@ function initConversation() {
 }
 
 function loadMessages() {
-  if (conversation.currentConversationId) {
-    messages.value = conversation.getConversation(conversation.currentConversationId)
-    scrollToBottom()
-  }
+  messages.value = conversation.getCurrentConversation()
+  scrollToBottom()
 }
 
 function formatTime(date: Date | string): string {
@@ -162,7 +160,9 @@ async function sendMessage() {
     // 检查是否是决策请求
     const isDecisionRequest = checkDecisionRequest(text)
     await conversation.sendMessage(text, isDecisionRequest)
-    loadMessages()
+    // 刷新消息列表
+    messages.value = conversation.getCurrentConversation()
+    scrollToBottom()
   } catch (error) {
     console.error('发送消息失败:', error)
     alert('消息发送失败，请稍后重试')
