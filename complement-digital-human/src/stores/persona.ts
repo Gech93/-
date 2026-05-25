@@ -201,26 +201,39 @@ export const usePersonaStore = defineStore('persona', () => {
 
   // 保存到本地存储
   function saveToStorage() {
-    const data = {
-      userMbti: userMbti.value,
-      personas: personas.value,
-      activePersonaId: activePersonaId.value,
-      isTestCompleted: isTestCompleted.value,
-      answers: answers.value,
+    try {
+      const data = {
+        userMbti: userMbti.value,
+        personas: personas.value,
+        activePersonaId: activePersonaId.value,
+        isTestCompleted: isTestCompleted.value,
+        answers: answers.value,
+      }
+      localStorage.setItem('persona_data', JSON.stringify(data))
+    } catch (error) {
+      console.error('保存数据失败:', error)
     }
-    localStorage.setItem('persona_data', JSON.stringify(data))
   }
 
   // 从本地存储加载
   function loadFromStorage() {
-    const dataStr = localStorage.getItem('persona_data')
-    if (dataStr) {
-      const data = JSON.parse(dataStr)
-      userMbti.value = data.userMbti
-      personas.value = data.personas || []
-      activePersonaId.value = data.activePersonaId
-      isTestCompleted.value = data.isTestCompleted
-      answers.value = data.answers || {}
+    try {
+      const dataStr = localStorage.getItem('persona_data')
+      if (dataStr) {
+        const data = JSON.parse(dataStr)
+        userMbti.value = data.userMbti || null
+        personas.value = data.personas || []
+        activePersonaId.value = data.activePersonaId || null
+        isTestCompleted.value = data.isTestCompleted || false
+        answers.value = data.answers || {}
+      }
+    } catch (error) {
+      console.error('加载数据失败:', error)
+      userMbti.value = null
+      personas.value = []
+      activePersonaId.value = null
+      isTestCompleted.value = false
+      answers.value = {}
     }
   }
 

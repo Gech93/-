@@ -3,7 +3,7 @@
     <div class="nav-header">
       <button class="nav-left" @click="goBack">←</button>
       <div class="nav-center" @click="showDecisionInfo = true">
-        <span class="persona-name">{{ personaStore.activePersona?.name || '数字人' }}</span>
+        <span class="persona-name">{{ activePersonaName }}</span>
         <span class="persona-mode">{{ isDecisionMode ? '决策模式' : '普通模式' }}</span>
       </div>
       <button class="nav-right" @click="showSettings">⋮</button>
@@ -12,10 +12,10 @@
     <div class="message-list" ref="messageListRef">
       <div class="welcome-message" v-if="messages.length === 0">
         <div class="welcome-avatar">
-          <span>{{ personaStore.activePersona?.complementMbti || 'AI' }}</span>
+          <span>{{ activePersonaMbti }}</span>
         </div>
         <p class="welcome-text">
-          你好！我是{{ personaStore.activePersona?.name || '你的数字人' }}，一个与你互补的AI伙伴。
+          你好！我是{{ activePersonaName }}，一个与你互补的AI伙伴。
           有什么想聊的，或者需要我做决策参考吗？
         </p>
       </div>
@@ -28,7 +28,7 @@
         :class="msg.role"
       >
         <div class="message-avatar" v-if="msg.role === 'assistant'">
-          <span>{{ personaStore.activePersona?.complementMbti || 'AI' }}</span>
+          <span>{{ activePersonaMbti }}</span>
         </div>
         <div class="message-content">
           <p class="message-text">{{ msg.content }}</p>
@@ -104,7 +104,7 @@
           placeholder="输入你的想法..."
           @keyup.enter="sendMessage"
         />
-        <button class="send-btn" :disabled="!inputText.trim()" @click="sendMessage">
+        <button class="send-btn" :disabled="!inputText.trim() || !personaStore.activePersona" @click="sendMessage">
           发送
         </button>
       </div>
@@ -113,7 +113,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick } from 'vue'
+import { ref, computed, nextTick, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePersonaStore } from '../stores/persona'
 import { useConversation } from '../stores/conversation'
@@ -129,7 +129,20 @@ const showDecisionInfo = ref(false)
 const isTyping = ref(false)
 const messageListRef = ref<HTMLElement | null>(null)
 
-function formatTime(date: Date): string {
+const activePersonaName = computed(() => personaStore.activePersona?.name || '数字人')
+const activePersonaMbti = computed(() => personaStore.activePersona?.complementMbti || 'AI')
+
+onMounted(() => {
+  // 初始化对话
+  if (personaStore.activePersona) {
+    const convId = conversation.currentConversationId
+    if (convId) {
+      messages.value = conversation.getConversation(convId)
+    }
+  }
+})
+
+function formatTime(date: Date | string): string {
   const d = new Date(date)
   return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 }
@@ -146,48 +159,34 @@ function showSettings() {
 }
 
 async function sendMessage() {
-  if (!inputText.value.trim()) return
+  if (!inputText.value.trim() || !personaStore.activePersona) return
 
-  const userMsg: any = {
-    id: Date.now().toString(),
-    role: 'user',
-    content: inputText.value,
-    timestamp: new Date(),
-    isDecisionMode: isDecisionMode.value,
+  // 确保有对话
+  if (!conversation.currentConversationId) {
+    conversation.createConversation(personaStore.activePersona.id)
   }
 
-  messages.value.push(userMsg)
   const text = inputText.value
   inputText.value = ''
-
-  scrollToBottom()
-
   isTyping.value = true
 
   try {
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    const responses = isDecisionMode.value 
-      ? [
-          '这是一个重要的决定，让我们从多个角度来分析：\n\n**【利弊分析】**\n• 优势：让我们看看这个选择的积极方面\n• 劣势：也需要考虑潜在的风险\n\n**【关键问题】**\n在做出决定之前，建议你思考：\n1. 这个决定对你的长期目标有什么影响？\n2. 最坏的情况是什么？你能接受吗？\n\n**【风险提示】**\n做重大决策时，建议多方收集信息，谨慎考虑。',
-        ]
-      : [
-          '这是一个很有趣的想法！从另一个角度来看，或许我们可以考虑...',
-          '我理解你的感受。让我从一个不同的视角来帮你分析一下。',
-          '作为你的互补视角，我认为这个问题可以从多个方面来思考。',
-          '很有意思的思路！让我补充一些你可能没有考虑到的角度。',
-        ]
-    
-    const randomIndex = Math.floor(Math.random() * responses.length)
-    const aiMsg: any = {
-      id: (Date.now() + 1).toString(),
-      role: 'assistant',
-      content: responses[randomIndex] + (isDecisionMode.value ? '' : `\n\n根据你描述的情况（"${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"），我建议你可以尝试从另一个角度看待这个问题。`),
+    // 添加用户消息
+    const userMsg = {
+      id: Date.now().toString(),
+      role: 'user' as const,
+      content: text,
       timestamp: new Date(),
       isDecisionMode: isDecisionMode.value,
     }
+    messages.value.push(userMsg)
+    scrollToBottom()
 
+    // 使用 store 发送消息
+    const aiMsg = await conversation.sendMessage(text, isDecisionMode.value)
     messages.value.push(aiMsg)
+  } catch (error) {
+    console.error('发送消息失败:', error)
   } finally {
     isTyping.value = false
   }
@@ -203,8 +202,9 @@ function scrollToBottom() {
   })
 }
 
-function handleComplementChange(e: any) {
-  const level = parseInt(e.target.value)
+function handleComplementChange(e: Event) {
+  const target = e.target as HTMLInputElement
+  const level = parseInt(target.value)
   if (!personaStore.activePersona) return
 
   const canModify = personaStore.canModifyComplement(personaStore.activePersona)
