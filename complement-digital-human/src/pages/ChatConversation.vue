@@ -76,9 +76,13 @@
           v-model="inputText"
           class="message-input"
           placeholder="输入你的想法..."
-          @keyup.enter="sendMessage"
+          @keyup.enter="handleKeyUp"
         />
-        <button class="send-btn" :disabled="!inputText.trim() || !personaStore.activePersona" @click="sendMessage">
+        <button 
+          class="send-btn" 
+          :disabled="!canSend || isTyping" 
+          @click="sendMessage"
+        >
           发送
         </button>
       </div>
@@ -106,6 +110,7 @@ const complementModified = ref(false)
 
 const activePersonaName = computed(() => personaStore.activePersona?.name || '数字人')
 const activePersonaMbti = computed(() => personaStore.activePersona?.complementMbti || 'AI')
+const canSend = computed(() => inputText.value.trim().length > 0 && personaStore.activePersona !== null)
 
 // 监听活跃人格变化，更新互补度
 watch(() => personaStore.activePersona, (newPersona) => {
@@ -119,7 +124,7 @@ onMounted(() => {
 })
 
 watch(() => conversation.currentConversationId, () => {
-  loadMessages()
+  refreshMessages()
 })
 
 function initConversation() {
@@ -132,11 +137,12 @@ function initConversation() {
     conversation.createConversation(personaStore.activePersona.id)
   }
   
-  loadMessages()
+  refreshMessages()
 }
 
-function loadMessages() {
-  messages.value = conversation.getCurrentConversation()
+function refreshMessages() {
+  const convMessages = conversation.getCurrentConversation()
+  messages.value = [...convMessages]
   scrollToBottom()
 }
 
@@ -154,10 +160,19 @@ function quickSend(text: string) {
   sendMessage()
 }
 
-async function sendMessage() {
-  if (!inputText.value.trim() || !personaStore.activePersona) return
+function handleKeyUp(event: KeyboardEvent) {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault()
+    sendMessage()
+  }
+}
 
-  const text = inputText.value
+async function sendMessage() {
+  if (!canSend.value || !personaStore.activePersona) {
+    return
+  }
+
+  const text = inputText.value.trim()
   inputText.value = ''
   isTyping.value = true
 
@@ -165,12 +180,14 @@ async function sendMessage() {
     // 检查是否是决策请求
     const isDecisionRequest = checkDecisionRequest(text)
     await conversation.sendMessage(text, isDecisionRequest)
+    
     // 刷新消息列表
-    messages.value = conversation.getCurrentConversation()
-    scrollToBottom()
+    refreshMessages()
   } catch (error) {
     console.error('发送消息失败:', error)
     alert('消息发送失败，请稍后重试')
+    // 恢复输入的内容，方便用户重新发送
+    inputText.value = text
   } finally {
     isTyping.value = false
   }
