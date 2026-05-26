@@ -152,6 +152,12 @@ const showApiKeyModal = ref(false)
 const apiKey = ref('')
 const useDeepSeek = ref(false)
 
+// 获取存储键
+const getStorageKey = () => {
+  const personaId = personaStore.activePersona?.id || 'default'
+  return `chat_messages_${personaId}`
+}
+
 onMounted(() => {
   const activePersona = personaStore.activePersona
   if (activePersona) {
@@ -161,6 +167,7 @@ onMounted(() => {
   }
   
   loadApiSettings()
+  loadMessages()
 })
 
 function loadApiSettings() {
@@ -170,6 +177,41 @@ function loadApiSettings() {
   if (savedKey) {
     apiKey.value = savedKey
     useDeepSeek.value = savedUseDeepSeek === 'true'
+  }
+}
+
+function loadMessages() {
+  const storageKey = getStorageKey()
+  const savedMessages = localStorage.getItem(storageKey)
+  
+  if (savedMessages) {
+    try {
+      const parsed = JSON.parse(savedMessages)
+      messages.value = parsed.map((msg: any) => ({
+        ...msg,
+        timestamp: new Date(msg.timestamp)
+      }))
+    } catch (error) {
+      console.error('加载消息失败:', error)
+      messages.value = []
+    }
+  }
+  
+  nextTick(() => {
+    scrollToBottom()
+  })
+}
+
+function saveMessages() {
+  const storageKey = getStorageKey()
+  try {
+    const dataToSave = messages.value.map(msg => ({
+      ...msg,
+      timestamp: msg.timestamp.toISOString()
+    }))
+    localStorage.setItem(storageKey, JSON.stringify(dataToSave))
+  } catch (error) {
+    console.error('保存消息失败:', error)
   }
 }
 
@@ -187,12 +229,6 @@ function saveApiKey() {
   localStorage.setItem('use_deepseek', useDeepSeek.value.toString())
   showApiKeyModal.value = false
   alert('设置已保存！')
-}
-
-function loadMessages() {
-  nextTick(() => {
-    scrollToBottom()
-  })
 }
 
 function formatTime(date: Date | string): string {
@@ -218,6 +254,7 @@ async function handleSend() {
     timestamp: new Date(),
   }
   messages.value.push(userMsg)
+  saveMessages()
   
   isTyping.value = true
   scrollToBottom()
@@ -238,6 +275,7 @@ async function handleSend() {
       timestamp: new Date(),
     }
     messages.value.push(aiMsg)
+    saveMessages()
   } catch (error) {
     console.error('AI 回复失败:', error)
     const errorMsg: Message = {
@@ -247,6 +285,7 @@ async function handleSend() {
       timestamp: new Date(),
     }
     messages.value.push(errorMsg)
+    saveMessages()
   } finally {
     isTyping.value = false
     scrollToBottom()
