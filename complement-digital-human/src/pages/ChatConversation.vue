@@ -4,13 +4,12 @@
       <button class="nav-left" @click="goBack">←</button>
       <div class="nav-center">
         <span class="persona-name">{{ activePersonaName }}</span>
-        <span class="persona-mode">{{ personaStore.activePersona?.complementLevel }}% 互补</span>
+        <span class="persona-mode">{{ currentComplementLevel }}% 互补</span>
       </div>
       <button class="nav-right" @click="showSettings">⋮</button>
     </div>
 
     <div class="message-list" ref="messageListRef">
-      <!-- 欢迎消息 -->
       <div class="welcome-message" v-if="messages.length === 0">
         <div class="welcome-avatar">
           <span>{{ activePersonaMbti }}</span>
@@ -31,7 +30,6 @@
         </div>
       </div>
 
-      <!-- 消息列表 -->
       <div
         v-for="msg in messages"
         :key="msg.id"
@@ -47,7 +45,6 @@
         </div>
       </div>
 
-      <!-- 正在输入 -->
       <div class="typing-indicator" v-if="isTyping">
         <div class="typing-dots">
           <div class="typing-dot"></div>
@@ -58,17 +55,17 @@
     </div>
 
     <div class="input-section">
-      <div class="complement-slider" v-if="personaStore.activePersona">
+      <div class="complement-slider" v-if="persona">
         <span class="slider-label">互补度</span>
         <input
           type="range"
-          v-model="localComplementLevel"
+          v-model.number="currentComplementLevel"
           :min="0"
           :max="100"
           :step="10"
-          @change="handleComplementChange"
+          @change="updateComplement"
         />
-        <span class="slider-value">{{ localComplementLevel }}%</span>
+        <span class="slider-value">{{ currentComplementLevel }}%</span>
       </div>
 
       <div class="input-row">
@@ -76,11 +73,10 @@
           v-model="inputText"
           class="message-input"
           placeholder="输入你的想法..."
-          @keyup.enter="handleKeyUp"
         />
         <button 
           class="send-btn" 
-          :disabled="!canSend || isTyping" 
+          :disabled="!inputText || isTyping" 
           @click="sendMessage"
         >
           发送
@@ -91,7 +87,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePersonaStore } from '../stores/persona'
 import { useConversation } from '../stores/conversation'
@@ -103,46 +99,32 @@ const conversation = useConversation()
 
 const messages = ref<Message[]>([])
 const inputText = ref('')
-const localComplementLevel = ref(50)
 const isTyping = ref(false)
 const messageListRef = ref<HTMLElement | null>(null)
-const complementModified = ref(false)
 
-const activePersonaName = computed(() => personaStore.activePersona?.name || '数字人')
-const activePersonaMbti = computed(() => personaStore.activePersona?.complementMbti || 'AI')
-const canSend = computed(() => inputText.value.trim().length > 0 && personaStore.activePersona !== null)
-
-// 监听活跃人格变化，更新互补度
-watch(() => personaStore.activePersona, (newPersona) => {
-  if (newPersona) {
-    localComplementLevel.value = newPersona.complementLevel
-  }
-}, { immediate: true })
+const persona = computed(() => personaStore.activePersona)
+const activePersonaName = computed(() => persona.value?.name || '数字人')
+const activePersonaMbti = computed(() => persona.value?.complementMbti || 'AI')
+const currentComplementLevel = ref(50)
 
 onMounted(() => {
-  initConversation()
-})
-
-watch(() => conversation.currentConversationId, () => {
-  refreshMessages()
-})
-
-function initConversation() {
-  if (!personaStore.activePersona) {
+  if (!persona.value) {
     router.push('/chat')
     return
   }
   
+  currentComplementLevel.value = persona.value.complementLevel
+  
   if (!conversation.currentConversationId) {
-    conversation.createConversation(personaStore.activePersona.id)
+    conversation.createConversation(persona.value.id)
   }
   
-  refreshMessages()
-}
+  loadMessages()
+})
 
-function refreshMessages() {
-  const convMessages = conversation.getCurrentConversation()
-  messages.value = [...convMessages]
+function loadMessages() {
+  const conv = conversation.getCurrentConversation()
+  messages.value = [...conv]
   scrollToBottom()
 }
 
@@ -160,46 +142,28 @@ function quickSend(text: string) {
   sendMessage()
 }
 
-function handleKeyUp(event: KeyboardEvent) {
-  if (event.key === 'Enter' && !event.shiftKey) {
-    event.preventDefault()
-    sendMessage()
-  }
-}
-
-async function sendMessage() {
-  if (!canSend.value || !personaStore.activePersona) {
-    return
-  }
-
+function sendMessage() {
   const text = inputText.value.trim()
+  if (!text || isTyping.value) return
+
   inputText.value = ''
   isTyping.value = true
 
-  try {
-    // 检查是否是决策请求
-    const isDecisionRequest = checkDecisionRequest(text)
-    await conversation.sendMessage(text, isDecisionRequest)
-    
-    // 刷新消息列表
-    refreshMessages()
-  } catch (error) {
-    console.error('发送消息失败:', error)
-    alert('消息发送失败，请稍后重试')
-    // 恢复输入的内容，方便用户重新发送
+  const isDecision = checkDecisionRequest(text)
+  
+  conversation.sendMessage(text, isDecision).then(() => {
+    loadMessages()
+  }).catch((error) => {
+    console.error('发送失败:', error)
     inputText.value = text
-  } finally {
+  }).finally(() => {
     isTyping.value = false
-  }
+  })
 }
 
 function checkDecisionRequest(text: string): boolean {
-  const decisionKeywords = [
-    '决定', '决策', '选择', '选哪个', '怎么办', '纠结', '犹豫',
-    '帮我选', '给建议', '建议', '帮帮我', '重要决定', '难以抉择',
-    '不知道', '迷茫', '困难', '困惑', '烦恼'
-  ]
-  return decisionKeywords.some(keyword => text.includes(keyword))
+  const keywords = ['决定', '决策', '选择', '怎么办', '纠结', '建议', '迷茫']
+  return keywords.some(k => text.includes(k))
 }
 
 function scrollToBottom() {
@@ -210,26 +174,9 @@ function scrollToBottom() {
   })
 }
 
-function handleComplementChange() {
-  if (!personaStore.activePersona) return
-
-  const level = localComplementLevel.value
-  const canModify = personaStore.canModifyComplement(personaStore.activePersona)
-  if (!canModify) {
-    const remainDays = personaStore.getRemainDays(personaStore.activePersona)
-    alert(`每月限修改1次，还剩${remainDays}天`)
-    localComplementLevel.value = personaStore.activePersona.complementLevel
-    return
-  }
-
-  // 更新互补度
-  personaStore.updateComplementLevel(level)
-  complementModified.value = true
-  
-  // 短暂显示修改成功提示
-  setTimeout(() => {
-    complementModified.value = false
-  }, 1000)
+function updateComplement() {
+  if (!persona.value) return
+  personaStore.updateComplementLevel(currentComplementLevel.value)
 }
 
 function goBack() {
