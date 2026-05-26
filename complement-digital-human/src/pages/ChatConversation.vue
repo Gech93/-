@@ -102,14 +102,19 @@ const inputText = ref('')
 const localComplementLevel = ref(50)
 const isTyping = ref(false)
 const messageListRef = ref<HTMLElement | null>(null)
+const complementModified = ref(false)
 
 const activePersonaName = computed(() => personaStore.activePersona?.name || '数字人')
 const activePersonaMbti = computed(() => personaStore.activePersona?.complementMbti || 'AI')
 
-onMounted(() => {
-  if (personaStore.activePersona) {
-    localComplementLevel.value = personaStore.activePersona.complementLevel
+// 监听活跃人格变化，更新互补度
+watch(() => personaStore.activePersona, (newPersona) => {
+  if (newPersona) {
+    localComplementLevel.value = newPersona.complementLevel
   }
+}, { immediate: true })
+
+onMounted(() => {
   initConversation()
 })
 
@@ -200,7 +205,14 @@ function handleComplementChange() {
     return
   }
 
+  // 更新互补度
   personaStore.updateComplementLevel(level)
+  complementModified.value = true
+  
+  // 短暂显示修改成功提示
+  setTimeout(() => {
+    complementModified.value = false
+  }, 1000)
 }
 
 function goBack() {

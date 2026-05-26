@@ -133,7 +133,8 @@ export const usePersonaStore = defineStore('persona', () => {
     }
 
     const now = new Date()
-    const nextMonth = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+    // 新创建的人格可以立即修改互补度
+    const nextModify = new Date(now.getTime())
 
     const newPersona: Persona = {
       id: Date.now().toString(),
@@ -142,7 +143,7 @@ export const usePersonaStore = defineStore('persona', () => {
       complementMbti: calculateComplementMbti(userMbti.value),
       complementLevel: 50,
       createdAt: now.toISOString(),
-      nextModifyTime: nextMonth.toISOString(),
+      nextModifyTime: nextModify.toISOString(),
       totalConversations: 0,
       growthLevel: 1,
       isActive: personas.value.length === 0,
@@ -177,7 +178,7 @@ export const usePersonaStore = defineStore('persona', () => {
 
     if (now < nextModify) {
       const remainingDays = Math.ceil((nextModify.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
-      alert(`距离下次可修改还有 ${remainingDays} 天`)
+      console.log(`距离下次可修改还有 ${remainingDays} 天`)
       return false
     }
 
@@ -186,7 +187,6 @@ export const usePersonaStore = defineStore('persona', () => {
     persona.nextModifyTime = nextMonth.toISOString()
     saveToStorage()
 
-    alert('互补度已更新')
     return true
   }
 
