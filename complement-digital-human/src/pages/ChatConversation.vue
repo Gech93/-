@@ -83,6 +83,45 @@
         </button>
       </div>
     </div>
+
+    <!-- API Key 设置弹窗 -->
+    <div class="modal-overlay" v-if="showApiKeyModal" @click="showApiKeyModal = false">
+      <div class="modal-content" @click.stop>
+        <h3 class="modal-title">设置 DeepSeek API Key</h3>
+        
+        <div class="form-group">
+          <label class="form-label">API Key</label>
+          <input
+            v-model="apiKey"
+            class="form-input"
+            placeholder="输入你的 DeepSeek API Key"
+            type="password"
+          />
+          <p class="form-hint">从 DeepSeek 平台获取 API Key</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">
+            <input type="checkbox" v-model="useDeepSeek" />
+            启用 DeepSeek AI
+          </label>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn btn-cancel" @click="showApiKeyModal = false">取消</button>
+          <button class="btn btn-save" @click="saveApiKey">保存</button>
+        </div>
+
+        <div class="api-info">
+          <p>获取 API Key：</p>
+          <ol>
+            <li>访问 <a href="https://platform.deepseek.com/" target="_blank">DeepSeek 开放平台</a></li>
+            <li>注册并登录账号</li>
+            <li>创建 API Key 并复制</li>
+          </ol>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -90,12 +129,16 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePersonaStore } from '../stores/persona'
-import { useConversation } from '../stores/conversation'
-import type { Message } from '../stores/conversation'
+
+interface Message {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  timestamp: Date
+}
 
 const router = useRouter()
 const personaStore = usePersonaStore()
-const conversation = useConversation()
 
 const messages = ref<Message[]>([])
 const inputText = ref('')
@@ -105,8 +148,11 @@ const complementLevel = ref(50)
 const personaName = ref('数字人')
 const personaMbti = ref('AI')
 
+const showApiKeyModal = ref(false)
+const apiKey = ref('')
+const useDeepSeek = ref(false)
+
 onMounted(() => {
-  // 初始化 persona 信息
   const activePersona = personaStore.activePersona
   if (activePersona) {
     personaName.value = activePersona.name
@@ -114,17 +160,36 @@ onMounted(() => {
     complementLevel.value = activePersona.complementLevel
   }
   
-  // 初始化对话
-  if (!conversation.currentConversationId) {
-    const personaId = activePersona?.id || 'default'
-    conversation.createConversation(personaId)
-  }
-  
-  loadMessages()
+  loadApiSettings()
 })
 
+function loadApiSettings() {
+  const savedKey = localStorage.getItem('deepseek_api_key')
+  const savedUseDeepSeek = localStorage.getItem('use_deepseek')
+  
+  if (savedKey) {
+    apiKey.value = savedKey
+    useDeepSeek.value = savedUseDeepSeek === 'true'
+  }
+}
+
+function showSettings() {
+  showApiKeyModal.value = true
+}
+
+function saveApiKey() {
+  if (!apiKey.value.trim()) {
+    alert('请输入 API Key')
+    return
+  }
+  
+  localStorage.setItem('deepseek_api_key', apiKey.value.trim())
+  localStorage.setItem('use_deepseek', useDeepSeek.value.toString())
+  showApiKeyModal.value = false
+  alert('设置已保存！')
+}
+
 function loadMessages() {
-  messages.value = conversation.getCurrentConversation()
   nextTick(() => {
     scrollToBottom()
   })
@@ -135,25 +200,17 @@ function formatTime(date: Date | string): string {
   return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 }
 
-function showSettings() {
-  router.push('/settings')
-}
-
 function quickSend(text: string) {
   inputText.value = text
   handleSend()
 }
 
-function handleSend() {
+async function handleSend() {
   const text = inputText.value.trim()
-  if (!text) {
-    return
-  }
+  if (!text) return
 
-  // 清空输入
   inputText.value = ''
   
-  // 添加用户消息
   const userMsg: Message = {
     id: Date.now().toString(),
     role: 'user',
@@ -162,26 +219,88 @@ function handleSend() {
   }
   messages.value.push(userMsg)
   
-  // 显示加载状态
   isTyping.value = true
   scrollToBottom()
 
-  // 模拟 AI 回复
-  setTimeout(() => {
-    const aiResponse = generateResponse(text)
+  try {
+    let response: string
+    
+    if (useDeepSeek.value && apiKey.value) {
+      response = await callDeepSeekAPI(text)
+    } else {
+      response = generateMockResponse(text)
+    }
+    
     const aiMsg: Message = {
       id: (Date.now() + 1).toString(),
       role: 'assistant',
-      content: aiResponse,
+      content: response,
       timestamp: new Date(),
     }
     messages.value.push(aiMsg)
+  } catch (error) {
+    console.error('AI 回复失败:', error)
+    const errorMsg: Message = {
+      id: (Date.now() + 1).toString(),
+      role: 'assistant',
+      content: '抱歉，AI 回复失败了。你可以稍后重试，或检查 API Key 设置。',
+      timestamp: new Date(),
+    }
+    messages.value.push(errorMsg)
+  } finally {
     isTyping.value = false
     scrollToBottom()
-  }, 1000)
+  }
 }
 
-function generateResponse(text: string): string {
+async function callDeepSeekAPI(userMessage: string): Promise<string> {
+  const apiKeyValue = localStorage.getItem('deepseek_api_key')
+  
+  if (!apiKeyValue) {
+    throw new Error('未设置 API Key')
+  }
+
+  const persona = personaStore.activePersona
+  const userMbti = personaStore.userMbti || '未知'
+  const complementMbti = persona?.complementMbti || '未知'
+  const complementLevelValue = complementLevel.value
+
+  const systemPrompt = `你是用户的互补AI伙伴。用户的人格类型是 ${userMbti}，你的互补人格类型是 ${complementMbti}，互补度为 ${complementLevelValue}%。
+
+你的角色是提供与用户互补的视角和思考方式，帮助用户从不同角度看待问题。
+- 如果用户表现出内向(I)，你应该表现得外向(E)，更主动地分享想法
+- 如果用户偏重感觉(S)，你可以提供直觉(N)的观点，关注可能性和未来
+- 如果用户偏重思考(T)，你可以提供情感(F)的视角，关注人际关系和价值观
+- 如果用户偏重判断(J)，你可以表现得更随性(P)，提供灵活的方案
+
+保持友好、专业的语气，但始终保持你的互补特质。`
+
+  const response = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKeyValue}`
+    },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage }
+      ],
+      stream: false
+    })
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(errorData.error?.message || `API 请求失败: ${response.status}`)
+  }
+
+  const data = await response.json()
+  return data.choices[0].message.content
+}
+
+function generateMockResponse(text: string): string {
   const isDecision = checkDecisionRequest(text)
   
   if (isDecision) {
@@ -241,6 +360,7 @@ function goBack() {
   display: flex;
   flex-direction: column;
   background: #f5f5f5;
+  position: relative;
 }
 
 .nav-header {
@@ -499,5 +619,119 @@ function goBack() {
   font-weight: bold;
   border-radius: 24px;
   border: none;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 20px;
+  padding: 32px;
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-title {
+  font-size: 24px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-label {
+  display: block;
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 8px;
+}
+
+.form-input {
+  width: 100%;
+  height: 48px;
+  background: #f5f5f5;
+  border-radius: 12px;
+  padding: 0 16px;
+  font-size: 16px;
+  border: none;
+}
+
+.form-hint {
+  font-size: 12px;
+  color: #999;
+  margin-top: 8px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.btn {
+  flex: 1;
+  height: 48px;
+  border-radius: 24px;
+  font-size: 16px;
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-cancel {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.btn-save {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.api-info {
+  margin-top: 24px;
+  padding: 16px;
+  background: #f5f5f5;
+  border-radius: 12px;
+  font-size: 14px;
+  color: #666;
+}
+
+.api-info p {
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+.api-info ol {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.api-info li {
+  margin-bottom: 4px;
+}
+
+.api-info a {
+  color: #667eea;
+  text-decoration: none;
 }
 </style>
