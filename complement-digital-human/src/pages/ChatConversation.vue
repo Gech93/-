@@ -3,8 +3,8 @@
     <div class="nav-header">
       <button class="nav-left" @click="goBack">←</button>
       <div class="nav-center">
-        <span class="persona-name">{{ activePersonaName }}</span>
-        <span class="persona-mode">{{ currentComplementLevel }}% 互补</span>
+        <span class="persona-name">{{ personaName }}</span>
+        <span class="persona-mode">{{ complementLevel }}% 互补</span>
       </div>
       <button class="nav-right" @click="showSettings">⋮</button>
     </div>
@@ -12,11 +12,11 @@
     <div class="message-list" ref="messageListRef">
       <div class="welcome-message" v-if="messages.length === 0">
         <div class="welcome-avatar">
-          <span>{{ activePersonaMbti }}</span>
+          <span>{{ personaMbti }}</span>
         </div>
         <div class="welcome-content">
           <p class="welcome-text">
-            你好！我是{{ activePersonaName }}，一个与你互补的AI伙伴。
+            你好！我是{{ personaName }}，一个与你互补的AI伙伴。
           </p>
           <p class="welcome-subtitle">
             今天想聊点什么？或者我可以帮你从不同角度思考问题。
@@ -37,7 +37,7 @@
         :class="msg.role"
       >
         <div class="message-avatar" v-if="msg.role === 'assistant'">
-          <span>{{ activePersonaMbti }}</span>
+          <span>{{ personaMbti }}</span>
         </div>
         <div class="message-content">
           <p class="message-text">{{ msg.content }}</p>
@@ -55,17 +55,17 @@
     </div>
 
     <div class="input-section">
-      <div class="complement-slider" v-if="persona">
+      <div class="complement-slider">
         <span class="slider-label">互补度</span>
         <input
           type="range"
-          v-model.number="currentComplementLevel"
-          :min="0"
-          :max="100"
-          :step="10"
-          @change="updateComplement"
+          v-model.number="complementLevel"
+          min="0"
+          max="100"
+          step="10"
+          @change="updateComplementLevel"
         />
-        <span class="slider-value">{{ currentComplementLevel }}%</span>
+        <span class="slider-value">{{ complementLevel }}%</span>
       </div>
 
       <div class="input-row">
@@ -73,11 +73,11 @@
           v-model="inputText"
           class="message-input"
           placeholder="输入你的想法..."
+          @keydown.enter.prevent="handleSend"
         />
         <button 
           class="send-btn" 
-          :disabled="!inputText || isTyping" 
-          @click="sendMessage"
+          @click="handleSend"
         >
           发送
         </button>
@@ -101,31 +101,33 @@ const messages = ref<Message[]>([])
 const inputText = ref('')
 const isTyping = ref(false)
 const messageListRef = ref<HTMLElement | null>(null)
-
-const persona = computed(() => personaStore.activePersona)
-const activePersonaName = computed(() => persona.value?.name || '数字人')
-const activePersonaMbti = computed(() => persona.value?.complementMbti || 'AI')
-const currentComplementLevel = ref(50)
+const complementLevel = ref(50)
+const personaName = ref('数字人')
+const personaMbti = ref('AI')
 
 onMounted(() => {
-  if (!persona.value) {
-    router.push('/chat')
-    return
+  // 初始化 persona 信息
+  const activePersona = personaStore.activePersona
+  if (activePersona) {
+    personaName.value = activePersona.name
+    personaMbti.value = activePersona.complementMbti
+    complementLevel.value = activePersona.complementLevel
   }
   
-  currentComplementLevel.value = persona.value.complementLevel
-  
+  // 初始化对话
   if (!conversation.currentConversationId) {
-    conversation.createConversation(persona.value.id)
+    const personaId = activePersona?.id || 'default'
+    conversation.createConversation(personaId)
   }
   
   loadMessages()
 })
 
 function loadMessages() {
-  const conv = conversation.getCurrentConversation()
-  messages.value = [...conv]
-  scrollToBottom()
+  messages.value = conversation.getCurrentConversation()
+  nextTick(() => {
+    scrollToBottom()
+  })
 }
 
 function formatTime(date: Date | string): string {
@@ -139,30 +141,78 @@ function showSettings() {
 
 function quickSend(text: string) {
   inputText.value = text
-  sendMessage()
+  handleSend()
 }
 
-function sendMessage() {
+function handleSend() {
   const text = inputText.value.trim()
-  if (!text || isTyping.value) return
+  if (!text) {
+    return
+  }
 
+  // 清空输入
   inputText.value = ''
+  
+  // 添加用户消息
+  const userMsg: Message = {
+    id: Date.now().toString(),
+    role: 'user',
+    content: text,
+    timestamp: new Date(),
+  }
+  messages.value.push(userMsg)
+  
+  // 显示加载状态
   isTyping.value = true
+  scrollToBottom()
 
+  // 模拟 AI 回复
+  setTimeout(() => {
+    const aiResponse = generateResponse(text)
+    const aiMsg: Message = {
+      id: (Date.now() + 1).toString(),
+      role: 'assistant',
+      content: aiResponse,
+      timestamp: new Date(),
+    }
+    messages.value.push(aiMsg)
+    isTyping.value = false
+    scrollToBottom()
+  }, 1000)
+}
+
+function generateResponse(text: string): string {
   const isDecision = checkDecisionRequest(text)
   
-  conversation.sendMessage(text, isDecision).then(() => {
-    loadMessages()
-  }).catch((error) => {
-    console.error('发送失败:', error)
-    inputText.value = text
-  }).finally(() => {
-    isTyping.value = false
-  })
+  if (isDecision) {
+    return `这是一个重要的决定，让我们从多个角度来分析：
+
+【利弊分析】
+• 优势：让我们看看这个选择的积极方面
+• 劣势：也需要考虑潜在的风险
+
+【关键问题】
+1. 这个决定对你的长期目标有什么影响？
+2. 最坏的情况是什么？你能接受吗？
+
+【建议】
+建议多方收集信息，谨慎考虑后再做决定。`
+  }
+  
+  const responses = [
+    '这是一个很有趣的想法！从另一个角度来看，或许我们可以考虑...',
+    '我理解你的感受。让我从一个不同的视角来帮你分析一下。',
+    '作为你的互补视角，我认为这个问题可以从多个方面来思考。',
+    '很有意思的思路！让我补充一些你可能没有考虑到的角度。',
+    '我注意到你似乎在纠结这个问题。让我们换个方式来看看。',
+  ]
+  
+  const randomIndex = Math.floor(Math.random() * responses.length)
+  return `${responses[randomIndex]}\n\n根据你说的情况，我建议你可以尝试从另一个角度看待这个问题。`
 }
 
 function checkDecisionRequest(text: string): boolean {
-  const keywords = ['决定', '决策', '选择', '怎么办', '纠结', '建议', '迷茫']
+  const keywords = ['决定', '决策', '选择', '怎么办', '纠结', '建议', '迷茫', '帮我']
   return keywords.some(k => text.includes(k))
 }
 
@@ -174,9 +224,10 @@ function scrollToBottom() {
   })
 }
 
-function updateComplement() {
-  if (!persona.value) return
-  personaStore.updateComplementLevel(currentComplementLevel.value)
+function updateComplementLevel() {
+  if (personaStore.activePersona) {
+    personaStore.updateComplementLevel(complementLevel.value)
+  }
 }
 
 function goBack() {
@@ -448,11 +499,5 @@ function goBack() {
   font-weight: bold;
   border-radius: 24px;
   border: none;
-}
-
-.send-btn:disabled {
-  background: #e0e0e0;
-  color: #999999;
-  cursor: not-allowed;
 }
 </style>
