@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 // 隐私设置类型
-interface PrivacySettings {
+export interface PrivacySettings {
   storageMode: 'local' | 'cloud' | 'hybrid'
   storeConversationHistory: boolean
   allowPersonalityLearning: boolean

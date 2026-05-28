@@ -90,12 +90,10 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePersonaStore } from '../stores/persona'
-import { useConversation } from '../stores/conversation'
 import TabBar from '../components/TabBar.vue'
 
 const router = useRouter()
 const personaStore = usePersonaStore()
-const conversation = useConversation()
 
 const showPersonaPicker = ref(false)
 const conversationList = ref([
@@ -118,7 +116,7 @@ function startNewChat() {
   router.push('/chat/conversation')
 }
 
-function openConversation(conv: any) {
+function openConversation(_conv: any) {
   router.push('/chat/conversation')
 }
 

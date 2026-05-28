@@ -66,7 +66,7 @@
         <input
           type="checkbox"
           :checked="settings.storeConversationHistory"
-          @change="updateSetting('storeConversationHistory', $event.target.checked)"
+          @change="(e) => updateSetting('storeConversationHistory', (e.target as HTMLInputElement).checked)"
         />
       </div>
 
@@ -78,7 +78,7 @@
         <input
           type="checkbox"
           :checked="settings.allowPersonalityLearning"
-          @change="updateSetting('allowPersonalityLearning', $event.target.checked)"
+          @change="(e) => updateSetting('allowPersonalityLearning', (e.target as HTMLInputElement).checked)"
         />
       </div>
     </div>
