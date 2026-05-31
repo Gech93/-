@@ -1,0 +1,19 @@
+{
+  "name" : "complement-digital-human",
+  "appid" : "wx5a35a0f5b3d3b6d0",
+  "description" : "互补数字人 - 遇见另一个视角的你",
+  "versionName" : "1.0.0",
+  "versionCode" : "100",
+  "transformPx" : false,
+  "mp-weixin" : {
+    "appid" : "wx5a35a0f5b3d3b6d0",
+    "setting" : {
+      "urlCheck" : false,
+      "es6" : true,
+      "postcss" : true,
+      "minified" : true
+    },
+    "usingComponents" : true,
+    "permission" : {}
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "互补数字人"
+      }
+    },
+    {
+      "path": "pages/mbti-test/index",
+      "style": {
+        "navigationBarTitleText": "MBTI 测试",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/persona-list/index",
+      "style": {
+        "navigationBarTitleText": "人格管理"
+      }
+    },
+    {
+      "path": "pages/persona-create/index",
+      "style": {
+        "navigationBarTitleText": "创建人格",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/chat-list/index",
+      "style": {
+        "navigationBarTitleText": "对话"
+      }
+    },
+    {
+      "path": "pages/chat-conversation/index",
+      "style": {
+        "navigationBarTitleText": "",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/settings/index",
+      "style": {
+        "navigationBarTitleText": "设置"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "互补数字人",
+    "navigationBarBackgroundColor": "#667eea",
+    "backgroundColor": "#f5f5f5"
+  }
+}
