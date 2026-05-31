@@ -44,7 +44,14 @@ interface Persona {
   tags: string[]
 }
 
+// 创建单例 store，确保所有页面共享同一个实例
+let storeInstance: any = null
+
 export function usePersonaStore() {
+  if (storeInstance) {
+    return storeInstance
+  }
+
   const userMbti = ref<string | null>(null)
   const personas = ref<Persona[]>([])
   const activePersonaId = ref<string | null>(null)
@@ -109,12 +116,20 @@ export function usePersonaStore() {
 
   function createPersona(name: string, suggested?: typeof suggestedTypes[0]) {
     if (!canCreateMore.value) {
-      uni.showToast({ title: '已达到最大人格数量（5个）', icon: 'none' })
+      try {
+        uni.showToast({ title: '已达到最大人格数量（5个）', icon: 'none' })
+      } catch (e) {
+        console.log('提示：已达到最大人格数量')
+      }
       return null
     }
 
     if (!userMbti.value) {
-      uni.showToast({ title: '请先完成MBTI测试', icon: 'none' })
+      try {
+        uni.showToast({ title: '请先完成MBTI测试', icon: 'none' })
+      } catch (e) {
+        console.log('提示：请先完成MBTI测试')
+      }
       return null
     }
 
@@ -204,7 +219,16 @@ export function usePersonaStore() {
         isTestCompleted: isTestCompleted.value,
         answers: answers.value,
       }
-      uni.setStorageSync('persona_data', JSON.stringify(data))
+      try {
+        uni.setStorageSync('persona_data', JSON.stringify(data))
+      } catch (e) {
+        // H5 环境下使用 localStorage
+        try {
+          localStorage.setItem('persona_data', JSON.stringify(data))
+        } catch (e2) {
+          console.error('保存数据失败:', e2)
+        }
+      }
     } catch (error) {
       console.error('保存数据失败:', error)
     }
@@ -212,7 +236,18 @@ export function usePersonaStore() {
 
   function loadFromStorage() {
     try {
-      const dataStr = uni.getStorageSync('persona_data')
+      let dataStr: string | null = null
+      try {
+        dataStr = uni.getStorageSync('persona_data')
+      } catch (e) {
+        // H5 环境下使用 localStorage
+        try {
+          dataStr = localStorage.getItem('persona_data')
+        } catch (e2) {
+          console.log('无法获取存储数据')
+        }
+      }
+      
       if (dataStr) {
         const data = JSON.parse(dataStr)
         userMbti.value = data.userMbti || null
@@ -237,7 +272,7 @@ export function usePersonaStore() {
     isTestCompleted.value = false
   }
 
-  return {
+  storeInstance = {
     userMbti,
     personas,
     activePersonaId,
@@ -260,4 +295,6 @@ export function usePersonaStore() {
     loadFromStorage,
     resetTest,
   }
+
+  return storeInstance
 }

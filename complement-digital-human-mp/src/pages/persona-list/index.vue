@@ -16,14 +16,14 @@
         @click="selectPersona(persona)"
       >
         <view class="persona-avatar">
-          <text>{{ persona.complementMbti }}</text>
+          <text>{{ persona?.complementMbti || '' }}</text>
         </view>
         <view class="persona-info">
-          <text class="persona-name">{{ persona.name }}</text>
-          <text class="persona-type">互补类型：{{ persona.complementMbti }}</text>
-          <text class="persona-level">互补度 {{ persona.complementLevel }}%</text>
+          <text class="persona-name">{{ persona?.name || '' }}</text>
+          <text class="persona-type">互补类型：{{ persona?.complementMbti || '' }}</text>
+          <text class="persona-level">互补度 {{ persona?.complementLevel || 0 }}%</text>
         </view>
-        <view class="persona-check" v-if="persona.isActive">✓</view>
+        <view class="persona-check" v-if="persona?.isActive">✓</view>
       </view>
     </view>
 

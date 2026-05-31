@@ -6,11 +6,11 @@
 
     <view class="persona-switcher" v-if="personaStore.activePersona" @click="showPersonaPicker = true">
       <view class="persona-avatar">
-        <text>{{ personaStore.activePersona.complementMbti }}</text>
+        <text>{{ personaStore.activePersona?.complementMbti || '' }}</text>
       </view>
       <view class="persona-info">
-        <text class="persona-name">{{ personaStore.activePersona.name }}</text>
-        <text class="persona-mbti">互补度 {{ personaStore.activePersona.complementLevel }}%</text>
+        <text class="persona-name">{{ personaStore.activePersona?.name || '' }}</text>
+        <text class="persona-mbti">互补度 {{ personaStore.activePersona?.complementLevel || 0 }}%</text>
       </view>
       <text class="switch-icon">▼</text>
     </view>
@@ -47,13 +47,13 @@
           @click="selectPersona(persona)"
         >
           <view class="picker-avatar">
-            <text>{{ persona.complementMbti }}</text>
+            <text>{{ persona?.complementMbti || '' }}</text>
           </view>
           <view class="picker-info">
-            <text class="picker-name">{{ persona.name }}</text>
-            <text class="picker-desc">互补度 {{ persona.complementLevel }}%</text>
+            <text class="picker-name">{{ persona?.name || '' }}</text>
+            <text class="picker-desc">互补度 {{ persona?.complementLevel || 0 }}%</text>
           </view>
-          <text class="picker-check" v-if="persona.isActive">✓</text>
+          <text class="picker-check" v-if="persona?.isActive">✓</text>
         </view>
         <button class="picker-close" @click="showPersonaPicker = false">关闭</button>
       </view>
