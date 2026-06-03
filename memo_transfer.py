@@ -174,25 +174,36 @@ def process_files(input_paths: List[str], output_dir: str = "./output"):
         if os.path.isfile(path):
             ext = os.path.splitext(path)[1].lower()
             if ext == '.txt':
+                print(f"正在解析: {path}")
                 all_memos.extend(parser.parse_txt_file(path))
             elif ext == '.csv':
+                print(f"正在解析CSV: {path}")
                 all_memos.extend(parser.parse_csv_file(path))
             elif ext == '.json':
+                print(f"正在解析JSON: {path}")
                 all_memos.extend(parser.parse_json_file(path))
         elif os.path.isdir(path):
-            # 处理文件夹
-            for filename in os.listdir(path):
-                file_path = os.path.join(path, filename)
-                if os.path.isfile(file_path):
+            # 处理文件夹 - 递归处理所有txt文件
+            print(f"\n处理文件夹: {path}")
+            for root, dirs, files in os.walk(path):
+                for filename in sorted(files):
+                    file_path = os.path.join(root, filename)
                     ext = os.path.splitext(filename)[1].lower()
                     if ext == '.txt':
+                        print(f"  解析中: {filename}")
                         all_memos.extend(parser.parse_txt_file(file_path))
+                    elif ext == '.csv':
+                        print(f"  解析CSV: {filename}")
+                        all_memos.extend(parser.parse_csv_file(file_path))
     
     if not all_memos:
         print("未找到任何备忘录数据！")
         return
     
-    print(f"\n共解析到 {len(all_memos)} 条备忘录\n")
+    print(f"\n✅ 共解析到 {len(all_memos)} 条备忘录")
+    print(f"   - 总标题数: {sum(1 for m in all_memos if m.title and m.title != '无标题')}")
+    print(f"   - 总字符数: {sum(len(m.content or '') for m in all_memos)}")
+    print()
     
     # 导出
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -202,7 +213,8 @@ def process_files(input_paths: List[str], output_dir: str = "./output"):
     exporter.export_csv(all_memos, os.path.join(output_dir, f"vivo_memos_{timestamp}.csv"))
     exporter.export_json(all_memos, os.path.join(output_dir, f"vivo_memos_{timestamp}.json"))
     
-    print(f"\n✅ 转换完成！请将 output 文件夹中的文件传输到vivo手机")
+    print(f"📦 已生成3种格式的文件到 output/ 文件夹")
+    print(f"\n✅ 转换完成！请将文件传输到vivo手机")
 
 
 def main():

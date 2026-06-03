@@ -291,17 +291,42 @@
                     上传华为备忘录文件
                 </div>
                 <div class="instruction">
-                    支持的格式：.txt, .csv, .json (或直接拖拽华为导出的备忘录文件夹)
+                    支持的格式：.txt, .csv, .json
                 </div>
-                <div class="format-info">
-                    💡 如果您的华为备忘录导出为多个TXT文件，可以将它们打包成ZIP文件上传，或者同时选择多个文件。
+                <div class="format-info" style="background: #e7f3ff; border-left-color: #2196F3;">
+                    <strong>💡 批量处理功能：</strong>支持同时选择多个文件上传！
+                    <br><br>
+                    <strong>方法A - 批量导出：</strong>
+                    <br>
+                    1. 在华为备忘录中，长按选中多条备忘录
+                    <br>
+                    2. 点击"导出"选择"导出为TXT"
+                    <br>
+                    3. 系统会生成一个包含所有选中内容的TXT文件
+                    <br><br>
+                    <strong>方法B - 单条导出：</strong>
+                    <br>
+                    1. 逐个打开备忘录 → 右上角菜单 → 导出
+                    <br>
+                    2. 将导出的多个TXT文件一起上传
+                    <br><br>
+                    <strong>方法C - 云空间批量导出：</strong>
+                    <br>
+                    1. 访问 cloud.huawei.com
+                    <br>
+                    2. 进入备忘录，选择要导出的内容
+                    <br>
+                    3. 点击导出，系统会打包下载
                 </div>
                 <div class="file-input-wrapper">
                     <label class="file-input-label">
-                        📁 选择文件
+                        📁 选择文件（可多选）
                         <input type="file" id="fileInput" multiple accept=".txt,.csv,.json,.zip">
                     </label>
                     <span class="file-info" id="fileInfo">未选择文件</span>
+                </div>
+                <div style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 8px; font-size: 13px;">
+                    <strong>提示：</strong>一次最多可以处理100个文件，建议将相关备忘录整理到一个文件夹后上传。
                 </div>
             </div>
 
