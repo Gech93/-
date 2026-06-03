@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>华为备忘录 → Vivo 转移工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .step {
+            margin-bottom: 30px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .step-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .step-number {
+            width: 30px;
+            height: 30px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .instruction {
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 15px;
+        }
+
+        .file-input-wrapper {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .file-input-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .file-input-label:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .file-info {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .preview-area {
+            margin-top: 20px;
+            background: white;
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .memo-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        .memo-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .memo-content {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .memo-date {
+            color: #999;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        .format-info {
+            background: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .code {
+            background: #f4f4f4;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin-top: 10px;
+            overflow-x: auto;
+        }
+
+        .download-section {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 华为备忘录 → Vivo 转移工具</h1>
+            <p>轻松将您的华为备忘录数据转换并转移到vivo手机</p>
+        </div>
+
+        <div class="content">
+            <!-- 步骤1: 导出华为备忘录 -->
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">1</span>
+                    从华为手机导出备忘录
+                </div>
+                <div class="instruction">
+                    <p><strong>方法一：使用华为备忘录导出功能</strong></p>
+                    <ol style="margin-left: 20px; margin-top: 10px;">
+                        <li>打开华为备忘录应用</li>
+                        <li>点击右上角菜单 → 设置</li>
+                        <li>选择"导入/导出" → "导出为TXT"</li>
+                        <li>选择要导出的备忘录并保存</li>
+                    </ol>
+                    <p style="margin-top: 15px;"><strong>方法二：使用华为云空间</strong></p>
+                    <ol style="margin-left: 20px; margin-top: 10px;">
+                        <li>确保备忘录已同步到华为云空间</li>
+                        <li>在电脑上访问 cloud.huawei.com</li>
+                        <li>登录后进入备忘录，选择导出</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- 步骤2: 上传文件 -->
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">2</span>
+                    上传华为备忘录文件
+                </div>
+                <div class="instruction">
+                    支持的格式：.txt, .csv, .json (或直接拖拽华为导出的备忘录文件夹)
+                </div>
+                <div class="format-info">
+                    💡 如果您的华为备忘录导出为多个TXT文件，可以将它们打包成ZIP文件上传，或者同时选择多个文件。
+                </div>
+                <div class="file-input-wrapper">
+                    <label class="file-input-label">
+                        📁 选择文件
+                        <input type="file" id="fileInput" multiple accept=".txt,.csv,.json,.zip">
+                    </label>
+                    <span class="file-info" id="fileInfo">未选择文件</span>
+                </div>
+            </div>
+
+            <!-- 步骤3: 预览数据 -->
+            <div class="step" id="previewStep" style="display: none;">
+                <div class="step-title">
+                    <span class="step-number">3</span>
+                    预览备忘录数据
+                </div>
+                <div class="stats" id="stats"></div>
+                <div class="preview-area" id="previewArea"></div>
+            </div>
+
+            <!-- 步骤4: 转换和下载 -->
+            <div class="step" id="convertStep" style="display: none;">
+                <div class="step-title">
+                    <span class="step-number">4</span>
+                    转换并下载
+                </div>
+                <div class="instruction">
+                    选择您需要的导出格式，然后下载到电脑，再传输到vivo手机。
+                </div>
+                <div class="download-section">
+                    <button class="btn btn-primary" onclick="downloadFormat('txt')">📄 下载 TXT 格式</button>
+                    <button class="btn btn-primary" onclick="downloadFormat('csv')">📊 下载 CSV 格式</button>
+                    <button class="btn btn-primary" onclick="downloadFormat('json')">📋 下载 JSON 格式</button>
+                </div>
+                <div class="success-message" id="successMessage">
+                    ✅ 文件已准备好！请将下载的文件传输到vivo手机，然后使用vivo备忘录的导入功能。
+                </div>
+            </div>
+
+            <!-- 步骤5: 导入到vivo -->
+            <div class="step">
+                <div class="step-title">
+                    <span class="step-number">5</span>
+                    导入到vivo手机
+                </div>
+                <div class="instruction">
+                    <ol style="margin-left: 20px;">
+                        <li>将下载的文件传输到vivo手机</li>
+                        <li>打开vivo"原子笔记"或备忘录应用</li>
+                        <li>点击菜单 → 设置 → 导入数据</li>
+                        <li>选择刚才传输的文件进行导入</li>
+                    </ol>
+                    <div class="format-info" style="margin-top: 15px;">
+                        💡 提示：vivo原子笔记通常支持TXT和CSV格式导入。如果遇到问题，可以尝试在vivo手机上使用第三方备忘录应用（如印象笔记、有道云笔记等）进行中间转换。
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let memos = [];
+
+        // 文件上传处理
+        document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+
+        function handleFileUpload(event) {
+            const files = event.target.files;
+            if (files.length === 0) return;
+
+            document.getElementById('fileInfo').textContent = `已选择 ${files.length} 个文件`;
+            
+            memos = [];
+            let processedCount = 0;
+
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    processedCount++;
+                    
+                    if (file.name.endsWith('.txt')) {
+                        parseTxtFile(e.target.result, file.name);
+                    } else if (file.name.endsWith('.csv')) {
+                        parseCsvFile(e.target.result);
+                    } else if (file.name.endsWith('.json')) {
+                        parseJsonFile(e.target.result);
+                    }
+                    
+                    if (processedCount === files.length) {
+                        showPreview();
+                    }
+                };
+                
+                reader.readAsText(file);
+            });
+        }
+
+        // 解析TXT文件（华为备忘录常用格式）
+        function parseTxtFile(content, filename) {
+            // 华为备忘录通常的格式：每个备忘录有标题和内容
+            const lines = content.split('\n');
+            let currentMemo = {
+                title: filename.replace('.txt', ''),
+                content: '',
+                date: new Date().toISOString()
+            };
+            
+            let contentStarted = false;
+            
+            lines.forEach(line => {
+                line = line.trim();
+                if (line === '') return;
+                
+                // 尝试识别日期行
+                if (!contentStarted && (line.includes('年') || line.includes('/') || line.includes('-')) && line.length < 30) {
+                    currentMemo.date = line;
+                } else {
+                    if (!contentStarted && currentMemo.content === '') {
+                        // 第一行作为标题
+                        currentMemo.title = line;
+                    } else {
+                        currentMemo.content += (currentMemo.content ? '\n' : '') + line;
+                    }
+                    contentStarted = true;
+                }
+            });
+            
+            if (currentMemo.content || currentMemo.title !== filename.replace('.txt', '')) {
+                memos.push(currentMemo);
+            }
+        }
+
+        // 解析CSV文件
+        function parseCsvFile(content) {
+            const lines = content.split('\n');
+            const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+            
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+                
+                const values = parseCsvLine(lines[i]);
+                const memo = {
+                    title: '',
+                    content: '',
+                    date: new Date().toISOString()
+                };
+                
+                headers.forEach((header, idx) => {
+                    if (header.includes('标题') || header.includes('title') || header.includes('name')) {
+                        memo.title = values[idx] || '';
+                    } else if (header.includes('内容') || header.includes('content') || header.includes('body')) {
+                        memo.content = values[idx] || '';
+                    } else if (header.includes('时间') || header.includes('日期') || header.includes('date') || header.includes('time')) {
+                        memo.date = values[idx] || memo.date;
+                    }
+                });
+                
+                if (memo.title || memo.content) {
+                    memos.push(memo);
+                }
+            }
+        }
+
+        // 解析CSV行（处理带引号的情况）
+        function parseCsvLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let char of line) {
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            result.push(current.trim());
+            
+            return result;
+        }
+
+        // 解析JSON文件
+        function parseJsonFile(content) {
+            try {
+                const data = JSON.parse(content);
+                if (Array.isArray(data)) {
+                    data.forEach(item => {
+                        memos.push({
+                            title: item.title || item.name || '',
+                            content: item.content || item.body || item.text || '',
+                            date: item.date || item.time || item.createdAt || new Date().toISOString()
+                        });
+                    });
+                }
+            } catch (e) {
+                console.error('JSON解析失败', e);
+            }
+        }
+
+        // 显示预览
+        function showPreview() {
+            document.getElementById('previewStep').style.display = 'block';
+            document.getElementById('convertStep').style.display = 'block';
+            
+            // 显示统计
+            const statsHtml = `
+                <div class="stat-card">
+                    <div class="stat-number">${memos.length}</div>
+                    <div class="stat-label">备忘录数量</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${Math.round(memos.reduce((sum, m) => sum + (m.content?.length || 0), 0) / 100) / 10}K</div>
+                    <div class="stat-label">总字符数</div>
+                </div>
+            `;
+            document.getElementById('stats').innerHTML = statsHtml;
+            
+            // 显示预览
+            let previewHtml = '';
+            if (memos.length === 0) {
+                previewHtml = '<div class="empty-state">没有解析到备忘录数据，请检查文件格式</div>';
+            } else {
+                memos.slice(0, 10).forEach((memo, idx) => {
+                    previewHtml += `
+                        <div class="memo-item">
+                            <div class="memo-title">${idx + 1}. ${escapeHtml(memo.title) || '无标题'}</div>
+                            <div class="memo-content">${escapeHtml(memo.content?.substring(0, 200) || '无内容')}${memo.content?.length > 200 ? '...' : ''}</div>
+                            <div class="memo-date">${memo.date}</div>
+                        </div>
+                    `;
+                });
+                if (memos.length > 10) {
+                    previewHtml += `<div style="text-align: center; color: #999; margin-top: 15px;">... 还有 ${memos.length - 10} 条备忘录</div>`;
+                }
+            }
+            document.getElementById('previewArea').innerHTML = previewHtml;
+        }
+
+        // HTML转义
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 下载文件
+        function downloadFormat(format) {
+            let content = '';
+            let filename = `vivo备忘录_${new Date().toISOString().slice(0,10)}.${format}`;
+            let mimeType = 'text/plain';
+            
+            if (format === 'txt') {
+                content = memos.map(m => `【${m.title || '无标题'}】\n${m.content || ''}\n\n---\n`).join('\n');
+            } else if (format === 'csv') {
+                content = '标题,内容,时间\n';
+                memos.forEach(m => {
+                    content += `"${escapeCsv(m.title)}","${escapeCsv(m.content)}","${m.date}"\n`;
+                });
+                mimeType = 'text/csv';
+            } else if (format === 'json') {
+                content = JSON.stringify(memos, null, 2);
+                mimeType = 'application/json';
+            }
+            
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            document.getElementById('successMessage').classList.add('show');
+        }
+
+        // CSV转义
+        function escapeCsv(text) {
+            if (!text) return '';
+            return text.replace(/"/g, '""').replace(/\n/g, '\\n');
+        }
+    </script>
+</body>
+</html>
