@@ -64,12 +64,25 @@ function selectOption(index: number) {
   personaStore.setAnswer(currentQuestion.value.id, index)
 }
 
+function describeProfile(): string {
+  const profile = personaStore.mbtiProfile
+  if (!profile || !profile.scores) return ''
+  const s = profile.scores
+  const dims = [
+    { name: 'E/I', value: s.E, pos: '外向', neg: '内向' },
+    { name: 'S/N', value: s.S, pos: '感觉', neg: '直觉' },
+    { name: 'T/F', value: s.T, pos: '思考', neg: '情感' },
+    { name: 'J/P', value: s.J, pos: '判断', neg: '感知' },
+  ]
+  return dims.map(d => `${d.value >= 50 ? d.pos : d.neg}(${d.value}%)`).join('，')
+}
+
 function handleNext() {
   if (isLastQuestion.value) {
     personaStore.completeMbtiTest()
     uni.showModal({
       title: '测试完成',
-      content: `你的MBTI类型是：${personaStore.userMbti}\n\n现在创建你的第一个互补数字人吗？`,
+      content: `你的MBTI类型是：${personaStore.userMbti}\n维度强度：${describeProfile()}\n测试置信度：${personaStore.mbtiProfile?.confidence || 0}%\n\n现在创建你的第一个互补数字人吗？`,
       confirmText: '创建',
       cancelText: '稍后',
       success: (res) => {

@@ -72,9 +72,9 @@
       </view>
 
       <view class="preview-card" v-if="personaName && personaStore.userMbti">
-        <text class="preview-icon">{{ personaStore.userMbti.split('').reverse().join('') }}</text>
+        <text class="preview-icon">{{ complementMbti }}</text>
         <text class="preview-name">{{ personaName }}</text>
-        <text class="preview-mbti">互补类型：{{ personaStore.userMbti.split('').reverse().join('') }}</text>
+        <text class="preview-mbti">互补类型：{{ complementMbti }}（互补度 {{ selectedComplementLevel }}%）</text>
       </view>
     </view>
 
@@ -91,11 +91,19 @@
         </view>
         <view class="info-row">
           <text class="info-label">数字人MBTI</text>
-          <text class="info-value highlight">{{ personaStore.userMbti?.split('').reverse().join('') }}</text>
+          <text class="info-value highlight">{{ complementMbti }}</text>
         </view>
         <view class="info-row">
           <text class="info-label">互补度</text>
           <text class="info-value">{{ selectedComplementLevel }}%</text>
+        </view>
+        <view class="info-row" v-if="profile">
+          <text class="info-label">人格置信度</text>
+          <text class="info-value">{{ profile.confidence }}%</text>
+        </view>
+        <view class="info-row" v-if="profile">
+          <text class="info-label">互补维度</text>
+          <text class="info-value dims-value">{{ complementDimText }}</text>
         </view>
       </view>
 
@@ -134,7 +142,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { usePersonaStore } from '../../stores/persona'
+import { usePersonaStore, calculateComplementMbti } from '../../stores/persona'
 
 const personaStore = usePersonaStore()
 
@@ -142,6 +150,27 @@ const currentStep = ref(1)
 const selectedType = ref<any>(null)
 const personaName = ref('')
 const selectedComplementLevel = ref(50)
+
+const profile = computed(() => personaStore.mbtiProfile || null)
+
+const complementMbti = computed(() => {
+  const userType = personaStore.userMbti
+  if (!userType) return ''
+  return calculateComplementMbti(userType, selectedComplementLevel.value, profile.value?.scores)
+})
+
+const complementDimText = computed(() => {
+  const userType = personaStore.userMbti
+  if (!userType) return ''
+  const dimLabels = ['E/I', 'S/N', 'T/F', 'J/P']
+  const diffs: string[] = []
+  for (let i = 0; i < 4; i++) {
+    if (userType[i] !== complementMbti.value[i]) {
+      diffs.push(dimLabels[i])
+    }
+  }
+  return diffs.length ? diffs.join('、') + ' 反转' : '暂无反转（0%）'
+})
 
 const suggestionList = computed(() => {
   if (selectedType.value) {
@@ -183,13 +212,9 @@ function handleNext() {
   if (currentStep.value < 3) {
     currentStep.value++
   } else {
-    const newPersona = personaStore.createPersona(personaName.value, selectedType.value)
+    const newPersona = personaStore.createPersona(personaName.value, selectedType.value, selectedComplementLevel.value)
     
     if (newPersona) {
-      if (selectedComplementLevel.value !== 50) {
-        personaStore.updateComplementLevel(selectedComplementLevel.value)
-      }
-      
       uni.showToast({
         title: '创建成功',
         icon: 'success'
@@ -507,6 +532,10 @@ function handleNext() {
 
 .info-value.highlight {
   color: #667eea;
+}
+
+.dims-value {
+  font-size: 26rpx;
 }
 
 .complement-slider {

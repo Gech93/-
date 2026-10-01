@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed, reactive } from 'vue'
 
 export const mbtiQuestions = [
   { id: 1, dimension: 'EI', question: '你更倾向于：', options: ['从与他人的互动中获得能量', '从独处中获得能量'] },
@@ -22,13 +22,50 @@ export const mbtiQuestions = [
   { id: 16, dimension: 'JP', question: '做选择时，你倾向于：', options: ['快速决定，不喜欢拖延', '保持开放，收集更多信息'] },
 ]
 
-export const suggestedTypes = [
-  { name: '分析师', tags: ['分析型'], description: '擅长逻辑分析和数据驱动建议' },
-  { name: '倾听者', tags: ['情感型'], description: '善于情感支持和理解' },
-  { name: '创意伙伴', tags: ['创意型'], description: '提供创新想法和灵感' },
-  { name: '规划师', tags: ['规划型'], description: '擅长目标分解和执行' },
-  { name: '探险家', tags: ['探险型'], description: '鼓励冒险和突破舒适区' },
+export interface CommunicationStyle {
+  formality: 'casual' | 'neutral' | 'formal'
+  tone: string[]
+  signature: string
+}
+
+export interface PersonaMemory {
+  summary: string
+  userFacts: string[]
+}
+
+export interface MbtiScores {
+  E: number
+  S: number
+  T: number
+  J: number
+}
+
+export interface MbtiProfile {
+  type: string
+  scores: MbtiScores
+  confidence: number
+}
+
+export interface SuggestedPersona {
+  name: string
+  tags: string[]
+  description: string
+  communicationStyle: CommunicationStyle
+}
+
+export const suggestedTypes: SuggestedPersona[] = [
+  { name: '分析师', tags: ['分析型'], description: '擅长逻辑分析和数据驱动建议', communicationStyle: { formality: 'formal', tone: ['理性', '直接', '结构化'], signature: '回复通常给出结构化分析和行动清单' } },
+  { name: '倾听者', tags: ['情感型'], description: '善于情感支持和理解', communicationStyle: { formality: 'casual', tone: ['温和', '共情', '耐心'], signature: '先共情理解，再温和给出建议' } },
+  { name: '创意伙伴', tags: ['创意型'], description: '提供创新想法和灵感', communicationStyle: { formality: 'casual', tone: ['活泼', '发散', '启发式'], signature: '喜欢用比喻和联想激发灵感' } },
+  { name: '规划师', tags: ['规划型'], description: '擅长目标分解和执行', communicationStyle: { formality: 'neutral', tone: ['条理', '务实', '鼓励'], signature: '擅长把目标拆解成可执行的步骤' } },
+  { name: '探险家', tags: ['探险型'], description: '鼓励冒险和突破舒适区', communicationStyle: { formality: 'casual', tone: ['热情', '大胆', '积极'], signature: '鼓励尝试新事物，推动行动' } },
 ]
+
+const defaultCommunicationStyle: CommunicationStyle = {
+  formality: 'neutral',
+  tone: ['理性', '友好'],
+  signature: '回复中常给出可执行的建议',
+}
 
 interface Persona {
   id: string
@@ -42,17 +79,43 @@ interface Persona {
   growthLevel: number
   isActive: boolean
   tags: string[]
+  communicationStyle: CommunicationStyle
+  memory: PersonaMemory
+  confidence: number
+  mbtiScores: MbtiScores
 }
 
-// 创建单例 store，确保所有页面共享同一个实例
-let storeInstance: any = null
+const keyOf: Record<string, keyof MbtiScores> = { E: 'E', I: 'E', S: 'S', N: 'S', T: 'T', F: 'T', J: 'J', P: 'J' }
 
-export function usePersonaStore() {
-  if (storeInstance) {
-    return storeInstance
-  }
+const oppositeLetter: Record<string, string> = {
+  E: 'I', I: 'E',
+  S: 'N', N: 'S',
+  T: 'F', F: 'T',
+  J: 'P', P: 'J',
+}
 
+// 互补距离矩阵：按互补度决定反转的维度数量，且优先反转用户倾向最弱的维度，
+// 保证"互补但可理解"，而不是无条件全部取反
+export function calculateComplementMbti(mbti: string, complementLevel = 50, scores?: MbtiScores): string {
+  const dims = mbti.split('')
+  const level = Math.min(100, Math.max(0, complementLevel))
+  const flipCount = Math.round((level / 100) * 4)
+
+  const firmness = scores ? dims.map(d => Math.abs(scores[keyOf[d]] - 50)) : [0, 0, 0, 0]
+  const flipOrder = [0, 1, 2, 3].sort((a, b) => firmness[a] - firmness[b])
+  const flipped = new Set(flipOrder.slice(0, flipCount))
+
+  return dims.map((d, i) => (flipped.has(i) ? oppositeLetter[d] : d)).join('')
+}
+
+function computeConfidence(scores: MbtiScores): number {
+  const devs = [scores.E, scores.S, scores.T, scores.J].map(s => Math.abs(s - 50) * 2)
+  return Math.round(devs.reduce((a, b) => a + b, 0) / 4)
+}
+
+function createStore() {
   const userMbti = ref<string | null>(null)
+  const mbtiProfile = ref<MbtiProfile | null>(null)
   const personas = ref<Persona[]>([])
   const activePersonaId = ref<string | null>(null)
   const mbtiTestProgress = ref(0)
@@ -73,17 +136,7 @@ export function usePersonaStore() {
 
   const suggestedNameList = computed(() => suggestedTypes)
 
-  function calculateComplementMbti(mbti: string): string {
-    const complementMap: Record<string, string> = {
-      'E': 'I', 'I': 'E',
-      'S': 'N', 'N': 'S',
-      'T': 'F', 'F': 'T',
-      'J': 'P', 'P': 'J',
-    }
-    return mbti.split('').map(c => complementMap[c]).join('')
-  }
-
-  function calculateMbti(): string {
+  function calculateMbtiProfile(): MbtiProfile {
     const counts = { E: 0, I: 0, S: 0, N: 0, T: 0, F: 0, J: 0, P: 0 }
     
     Object.entries(answers.value).forEach(([questionId, optionIndex]) => {
@@ -95,12 +148,25 @@ export function usePersonaStore() {
       }
     })
 
-    return [
-      counts.E > counts.I ? 'E' : 'I',
-      counts.S > counts.N ? 'S' : 'N',
-      counts.T > counts.F ? 'T' : 'F',
-      counts.J > counts.P ? 'J' : 'P',
-    ].join('')
+    const ratio = (a: number, b: number) => (a + b === 0 ? 50 : Math.round((a / (a + b)) * 100))
+
+    const scores: MbtiScores = {
+      E: ratio(counts.E, counts.I),
+      S: ratio(counts.S, counts.N),
+      T: ratio(counts.T, counts.F),
+      J: ratio(counts.J, counts.P),
+    }
+
+    return {
+      type: [
+        scores.E > 50 ? 'E' : 'I',
+        scores.S > 50 ? 'S' : 'N',
+        scores.T > 50 ? 'T' : 'F',
+        scores.J > 50 ? 'J' : 'P',
+      ].join(''),
+      scores,
+      confidence: computeConfidence(scores),
+    }
   }
 
   function setAnswer(questionId: number, optionIndex: number) {
@@ -109,12 +175,34 @@ export function usePersonaStore() {
   }
 
   function completeMbtiTest() {
-    userMbti.value = calculateMbti()
+    const profile = calculateMbtiProfile()
+    mbtiProfile.value = profile
+    userMbti.value = profile.type
     isTestCompleted.value = true
     saveToStorage()
   }
 
-  function createPersona(name: string, suggested?: typeof suggestedTypes[0]) {
+  function normalizePersona(p: any): Persona {
+    return {
+      id: p.id,
+      name: p.name,
+      mbtiType: p.mbtiType,
+      complementMbti: p.complementMbti,
+      complementLevel: p.complementLevel ?? 50,
+      createdAt: p.createdAt,
+      nextModifyTime: p.nextModifyTime,
+      totalConversations: p.totalConversations || 0,
+      growthLevel: p.growthLevel || 1,
+      isActive: p.isActive,
+      tags: p.tags || [],
+      communicationStyle: p.communicationStyle || defaultCommunicationStyle,
+      memory: p.memory || { summary: '', userFacts: [] },
+      confidence: p.confidence ?? 0,
+      mbtiScores: p.mbtiScores || { E: 50, S: 50, T: 50, J: 50 },
+    }
+  }
+
+  function createPersona(name: string, suggested?: typeof suggestedTypes[0], complementLevel = 50) {
     if (!canCreateMore.value) {
       try {
         uni.showToast({ title: '已达到最大人格数量（5个）', icon: 'none' })
@@ -135,19 +223,28 @@ export function usePersonaStore() {
 
     const now = new Date()
     const nextModify = new Date(now.getTime())
+    const profile = mbtiProfile.value || {
+      type: userMbti.value,
+      scores: { E: 50, S: 50, T: 50, J: 50 },
+      confidence: 0,
+    }
 
     const newPersona: Persona = {
       id: Date.now().toString(),
       name,
-      mbtiType: userMbti.value,
-      complementMbti: calculateComplementMbti(userMbti.value),
-      complementLevel: 50,
+      mbtiType: profile.type,
+      complementMbti: calculateComplementMbti(profile.type, complementLevel, profile.scores),
+      complementLevel,
       createdAt: now.toISOString(),
       nextModifyTime: nextModify.toISOString(),
       totalConversations: 0,
       growthLevel: 1,
       isActive: personas.value.length === 0,
       tags: suggested?.tags || [],
+      communicationStyle: suggested?.communicationStyle || defaultCommunicationStyle,
+      memory: { summary: '', userFacts: [] },
+      confidence: profile.confidence,
+      mbtiScores: profile.scores,
     }
 
     personas.value.push(newPersona)
@@ -175,12 +272,12 @@ export function usePersonaStore() {
     const nextModify = new Date(persona.nextModifyTime)
 
     if (now < nextModify) {
-      const remainingDays = Math.ceil((nextModify.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
       return false
     }
 
     const nextMonth = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
     persona.complementLevel = level
+    persona.complementMbti = calculateComplementMbti(persona.mbtiType, level, persona.mbtiScores)
     persona.nextModifyTime = nextMonth.toISOString()
     saveToStorage()
 
@@ -210,10 +307,32 @@ export function usePersonaStore() {
     return Math.max(0, Math.ceil((nextModify.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)))
   }
 
+  function addUserFact(fact: string) {
+    const persona = activePersona.value
+    if (!persona || !fact) return
+    const trimmed = fact.trim()
+    if (!trimmed) return
+    const facts = persona.memory.userFacts
+    if (!facts.includes(trimmed)) {
+      facts.push(trimmed)
+      if (facts.length > 12) facts.shift()
+      saveToStorage()
+    }
+  }
+
+  function recordConversation() {
+    const persona = activePersona.value
+    if (!persona) return
+    persona.totalConversations += 1
+    persona.growthLevel = Math.min(10, 1 + Math.floor(persona.totalConversations / 10))
+    saveToStorage()
+  }
+
   function saveToStorage() {
     try {
       const data = {
         userMbti: userMbti.value,
+        mbtiProfile: mbtiProfile.value,
         personas: personas.value,
         activePersonaId: activePersonaId.value,
         isTestCompleted: isTestCompleted.value,
@@ -251,7 +370,8 @@ export function usePersonaStore() {
       if (dataStr) {
         const data = JSON.parse(dataStr)
         userMbti.value = data.userMbti || null
-        personas.value = data.personas || []
+        mbtiProfile.value = data.mbtiProfile || null
+        personas.value = (data.personas || []).map(normalizePersona)
         activePersonaId.value = data.activePersonaId || null
         isTestCompleted.value = data.isTestCompleted || false
         answers.value = data.answers || {}
@@ -259,6 +379,7 @@ export function usePersonaStore() {
     } catch (error) {
       console.error('加载数据失败:', error)
       userMbti.value = null
+      mbtiProfile.value = null
       personas.value = []
       activePersonaId.value = null
       isTestCompleted.value = false
@@ -270,10 +391,13 @@ export function usePersonaStore() {
     mbtiTestProgress.value = 0
     answers.value = {}
     isTestCompleted.value = false
+    mbtiProfile.value = null
+    userMbti.value = null
   }
 
-  storeInstance = {
+  return reactive({
     userMbti,
+    mbtiProfile,
     personas,
     activePersonaId,
     mbtiTestProgress,
@@ -292,9 +416,19 @@ export function usePersonaStore() {
     deletePersona,
     canModifyComplement,
     getRemainDays,
+    addUserFact,
+    recordConversation,
     loadFromStorage,
     resetTest,
-  }
+  })
+}
 
+// 创建单例 store，确保所有页面共享同一个实例
+let storeInstance: ReturnType<typeof createStore> | null = null
+
+export function usePersonaStore() {
+  if (!storeInstance) {
+    storeInstance = createStore()
+  }
   return storeInstance
 }

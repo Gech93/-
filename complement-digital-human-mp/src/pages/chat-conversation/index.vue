@@ -4,7 +4,7 @@
       <view class="nav-left" @click="goBack">←</view>
       <view class="nav-center">
         <text class="persona-name">{{ personaName }}</text>
-        <text class="persona-mode">{{ complementLevel }}% 互补</text>
+        <text class="persona-mode">{{ personaMbti }} · {{ complementLevel }}% 互补</text>
       </view>
       <view class="nav-right" @click="showSettings">⋮</view>
     </view>
@@ -40,7 +40,21 @@
           <text>{{ personaMbti }}</text>
         </view>
         <view class="message-content">
-          <text class="message-text">{{ msg.content }}</text>
+          <template v-if="msg.role === 'assistant' && msg.structured">
+            <text class="message-text">{{ msg.structured.perspective }}</text>
+            <view class="suggestion-list" v-if="msg.structured.suggestions.length">
+              <view class="suggestion-item" v-for="(s, i) in msg.structured.suggestions" :key="i">
+                <text class="suggestion-index">{{ i + 1 }}</text>
+                <text class="suggestion-text">{{ s }}</text>
+              </view>
+            </view>
+            <view class="follow-up" v-if="msg.structured.followUpQuestion">
+              <text class="follow-up-text">💬 {{ msg.structured.followUpQuestion }}</text>
+            </view>
+          </template>
+          <template v-else>
+            <text class="message-text">{{ msg.content }}</text>
+          </template>
           <text class="message-time">{{ formatTime(msg.timestamp) }}</text>
         </view>
       </view>
@@ -128,11 +142,23 @@
 import { ref, onMounted } from 'vue'
 import { usePersonaStore } from '../../stores/persona'
 
+interface StructuredReply {
+  perspective: string
+  suggestions: string[]
+  followUpQuestion: string
+}
+
 interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
   timestamp: Date
+  structured?: StructuredReply
+}
+
+interface ChatResponse {
+  text: string
+  structured?: StructuredReply
 }
 
 const personaStore = usePersonaStore()
@@ -266,7 +292,7 @@ async function handleSend() {
   scrollToBottom()
 
   try {
-    let response: string
+    let response: ChatResponse
     
     if (useDeepSeek.value && apiKey.value) {
       response = await callDeepSeekAPI(text)
@@ -277,11 +303,20 @@ async function handleSend() {
     const aiMsg: Message = {
       id: (Date.now() + 1).toString(),
       role: 'assistant',
-      content: response,
+      content: response.text,
       timestamp: new Date(),
+      structured: response.structured,
     }
     messages.value.push(aiMsg)
     saveMessages()
+
+    // 记忆层：提取用户事实并记录会话
+    const persona = personaStore.activePersona
+    if (persona) {
+      persona.memory.summary = text.length > 40 ? text.slice(0, 40) + '…' : text
+      maybeExtractUserFact(text)
+      personaStore.recordConversation()
+    }
   } catch (error) {
     console.error('AI 回复失败:', error)
     const errorMsg: Message = {
@@ -298,27 +333,160 @@ async function handleSend() {
   }
 }
 
-async function callDeepSeekAPI(userMessage: string): Promise<string> {
+// ---------- 动态 System Prompt 工厂 ----------
+
+const traitBehaviors: Record<string, string> = {
+  E: '主动分享想法，带动对话节奏',
+  I: '先倾听、留出空间，用提问引导对方表达',
+  S: '关注事实与细节，给出可落地的具体步骤',
+  N: '关注可能性与未来趋势，跳出细节提出新思路',
+  T: '理性分析利弊，结构化解剖问题',
+  F: '关注价值观、人际影响与情感温度',
+  J: '帮助收敛决策，把想法落实为明确计划',
+  P: '保持灵活开放，提供多个备选方案',
+}
+
+const dimPairs: [string, string][] = [
+  ['E', 'I'],
+  ['S', 'N'],
+  ['T', 'F'],
+  ['J', 'P'],
+]
+
+function describeMbtiProfile(profile: any): string {
+  if (!profile || !profile.scores) return ''
+  const s = profile.scores
+  const dims = [
+    { name: 'E/I', value: s.E, pos: '外向(E)', neg: '内向(I)' },
+    { name: 'S/N', value: s.S, pos: '感觉(S)', neg: '直觉(N)' },
+    { name: 'T/F', value: s.T, pos: '思考(T)', neg: '情感(F)' },
+    { name: 'J/P', value: s.J, pos: '判断(J)', neg: '感知(P)' },
+  ]
+  return dims
+    .map(d => `${d.name} ${d.value >= 50 ? d.pos : d.neg}(${d.value}%)`)
+    .join('，')
+}
+
+function buildComplementGuidance(userMbti: string, complementMbti: string): string {
+  const lines: string[] = []
+  for (let i = 0; i < 4; i++) {
+    const [a, b] = dimPairs[i]
+    const u = userMbti[i]
+    const c = complementMbti[i]
+    if (u !== c) {
+      lines.push(
+        `- 用户在「${a}/${b}」维度上是「${u}」，请以「${c}」的倾向互补回应：${traitBehaviors[c]}`
+      )
+    }
+  }
+  return lines.join('\n') || '- 保持平衡而自然的回应方式'
+}
+
+function buildSystemPrompt(): string {
+  const persona = personaStore.activePersona
+  const userMbti = personaStore.userMbti || '未知'
+  const profileText = describeMbtiProfile(personaStore.mbtiProfile)
+  const complementMbti = persona?.complementMbti || '未知'
+  const level = persona?.complementLevel ?? 50
+  const style = persona?.communicationStyle
+  const memory = persona?.memory
+
+  const parts: string[] = []
+  parts.push(`你是「${persona?.name || '互补AI伙伴'}」，一个与用户人格互补的 AI 伙伴。`)
+  parts.push(`用户人格类型：${userMbti}${profileText ? `（各维度强度：${profileText}）` : ''}`)
+  parts.push(`你的互补人格类型：${complementMbti}，互补度 ${level}%（互补度越高，你与用户的人格差异越明显）。`)
+  parts.push('')
+  parts.push('【互补维度指引】')
+  parts.push(buildComplementGuidance(userMbti, complementMbti))
+
+  if (style) {
+    const formalityMap: Record<string, string> = { casual: '随和', neutral: '中性', formal: '正式' }
+    parts.push('')
+    parts.push(`【沟通风格】正式度：${formalityMap[style.formality] || '中性'}；语气：${style.tone.join('、')}；偏好：${style.signature}`)
+  }
+
+  if (memory && (memory.summary || (memory.userFacts && memory.userFacts.length))) {
+    parts.push('')
+    parts.push('【你对用户的记忆】')
+    if (memory.userFacts && memory.userFacts.length) {
+      parts.push(`用户提到过：${memory.userFacts.join('；')}`)
+    }
+    if (memory.summary) {
+      parts.push(`最近话题：${memory.summary}`)
+    }
+  }
+
+  parts.push('')
+  parts.push('请始终从互补视角回应，先共情再给新视角，避免简单附和。')
+  return parts.join('\n')
+}
+
+// ---------- 结构化输出 + Few-shot ----------
+
+function buildStructuredInstruction(): string {
+  return `请严格按照下面的 JSON 格式回复，不要输出任何 JSON 以外的文字：
+{"perspective":"...","suggestions":["...","...","..."],"followUpQuestion":"..."}
+
+字段说明：
+- perspective：从互补人格视角给出的核心分析与洞察（80-150字）
+- suggestions：2-4 条具体、可执行的建议
+- followUpQuestion：1 个引导用户继续思考的苏格拉底式追问
+
+参考示例（用户 INFJ，互补 ENTP，互补度 60%）：
+用户：我最近工作压力很大，总想辞职。
+{"perspective":"我理解这份疲惫。从更偏直觉(N)和思考(T)的视角看，你真正想逃离的或许不是工作本身，而是价值感缺失。","suggestions":["记录最近一周让你最有成就感的时刻，找到你的价值来源","和2-3位做过类似转型的人聊聊，获取真实参照","把辞职拆成换岗/转行/休息三个子选项分别评估"],"followUpQuestion":"如果明天就能辞职，你第一件想做的事是什么？"}`
+}
+
+function parseStructuredReply(content: string): StructuredReply {
+  try {
+    const cleaned = content.replace(/```json|```/g, '').trim()
+    const start = cleaned.indexOf('{')
+    const end = cleaned.lastIndexOf('}')
+    if (start === -1 || end === -1) throw new Error('no json')
+    const json = JSON.parse(cleaned.slice(start, end + 1))
+    return {
+      perspective: typeof json.perspective === 'string' ? json.perspective : content,
+      suggestions: Array.isArray(json.suggestions)
+        ? json.suggestions.map((s: any) => String(s)).filter(Boolean)
+        : [],
+      followUpQuestion: typeof json.followUpQuestion === 'string' ? json.followUpQuestion : '',
+    }
+  } catch (e) {
+    return { perspective: content, suggestions: [], followUpQuestion: '' }
+  }
+}
+
+function formatStructuredText(reply: StructuredReply): string {
+  const parts: string[] = []
+  if (reply.perspective) parts.push(reply.perspective)
+  if (reply.suggestions.length) {
+    parts.push('【建议】')
+    parts.push(reply.suggestions.map((s, i) => `${i + 1}. ${s}`).join('\n'))
+  }
+  if (reply.followUpQuestion) {
+    parts.push(`💬 ${reply.followUpQuestion}`)
+  }
+  return parts.join('\n\n')
+}
+
+// ---------- DeepSeek API（带对话历史） ----------
+
+async function callDeepSeekAPI(userMessage: string): Promise<ChatResponse> {
   const apiKeyValue = uni.getStorageSync('deepseek_api_key')
   
   if (!apiKeyValue) {
     throw new Error('未设置 API Key')
   }
 
-  const persona = personaStore.activePersona
-  const userMbti = personaStore.userMbti || '未知'
-  const complementMbti = persona?.complementMbti || '未知'
-  const complementLevelValue = complementLevel.value
+  const systemPrompt = buildSystemPrompt()
+  const structuredInstruction = buildStructuredInstruction()
+  const fullSystem = `${systemPrompt}\n\n${structuredInstruction}`
 
-  const systemPrompt = `你是用户的互补AI伙伴。用户的人格类型是 ${userMbti}，你的互补人格类型是 ${complementMbti}，互补度为 ${complementLevelValue}%。
-
-你的角色是提供与用户互补的视角和思考方式，帮助用户从不同角度看待问题。
-- 如果用户表现出内向(I)，你应该表现得外向(E)，更主动地分享想法
-- 如果用户偏重感觉(S)，你可以提供直觉(N)的观点，关注可能性和未来
-- 如果用户偏重思考(T)，你可以提供情感(F)的视角，关注人际关系和价值观
-- 如果用户偏重判断(J)，你可以表现得更随性(P)，提供灵活的方案
-
-保持友好、专业的语气，但始终保持你的互补特质。`
+  // 注入最近最多 6 条历史（不含当前这条用户消息）
+  const history = messages.value.slice(-7, -1).map(m => ({
+    role: m.role,
+    content: m.content,
+  }))
 
   const response = await uni.request({
     url: 'https://api.deepseek.com/chat/completions',
@@ -330,10 +498,12 @@ async function callDeepSeekAPI(userMessage: string): Promise<string> {
     data: {
       model: 'deepseek-chat',
       messages: [
-        { role: 'system', content: systemPrompt },
+        { role: 'system', content: fullSystem },
+        ...history,
         { role: 'user', content: userMessage }
       ],
-      stream: false
+      stream: false,
+      response_format: { type: 'json_object' }
     }
   })
 
@@ -342,43 +512,109 @@ async function callDeepSeekAPI(userMessage: string): Promise<string> {
   }
 
   const data = response.data as any
-  return data.choices[0].message.content
+  const content = data.choices[0].message.content
+  const structured = parseStructuredReply(content)
+  return { text: formatStructuredText(structured), structured }
 }
 
-function generateMockResponse(text: string): string {
-  const isDecision = checkDecisionRequest(text)
-  
-  if (isDecision) {
-    return `这是一个重要的决定，让我们从多个角度来分析：
+// ---------- Mock 模式：场景化模板库 + 苏格拉底式引导 ----------
 
-【利弊分析】
-• 优势：让我们看看这个选择的积极方面
-• 劣势：也需要考虑潜在的风险
+interface ScenarioTemplate {
+  perspective: string
+  suggestions: string[]
+  followUp: string
+}
 
-【关键问题】
-1. 这个决定对你的长期目标有什么影响？
-2. 最坏的情况是什么？你能接受吗？
+const scenarioTemplates: Record<string, ScenarioTemplate> = {
+  decision: {
+    perspective: '从互补视角来看，选择没有绝对的对错，关键在于它是否与你的长期方向一致。比起"选哪个"，更值得关注的是你选择背后的动机。',
+    suggestions: [
+      '把每个选项的利弊分别写下来，给它们打分',
+      '设想 1 年后回看，你会怎么评价这个选择',
+      '先做一个最小成本的尝试，用真实反馈代替想象',
+    ],
+    followUp: '如果最坏的结果出现，你仍然愿意选的那个，往往就是答案——你觉得呢？',
+  },
+  emotion: {
+    perspective: '我能感觉到这件事对你的影响。先别急着找解决方案，允许自己先被理解——情绪本身就在传递重要的信息。',
+    suggestions: [
+      '给此刻的情绪命名，写下它想告诉你什么',
+      '区分事实、想法和感受，减少过度解读',
+      '把情绪释放出来之后，再决定要不要行动',
+    ],
+    followUp: '如果可以给自己放一个小小的假，你最想做什么？',
+  },
+  relationship: {
+    perspective: '关系中看似是对方的问题，往往有一半和我们自己有关。换个角度看，矛盾常常是双方需求没有被说清楚的信号。',
+    suggestions: [
+      '先描述事实，再表达感受，而不是直接指责',
+      '问自己：这段关系里我最看重的是什么',
+      '换位写下对方可能的想法，寻找共同点',
+    ],
+    followUp: '如果你是对方，听到你的这些话，你希望听到什么样的表达？',
+  },
+  goal: {
+    perspective: '目标之所以让人焦虑，往往不是因为它太大，而是因为它还只是一个模糊的念头。把它变成可执行的小步，动力自然就回来了。',
+    suggestions: [
+      '把大目标拆成本周就能完成的 3 个小行动',
+      '给自己设一个可衡量的进度反馈机制',
+      '想象完成后的画面，用它驱动每天的行动',
+    ],
+    followUp: '如果这个目标只能推进一小步，你明天最愿意做的那一小步是什么？',
+  },
+  perspective: {
+    perspective: '换一个视角，并不是否定你的想法，而是帮你看到边界之外的可能性。很多时候我们不是缺少答案，而是困在单一的问题框架里。',
+    suggestions: [
+      '假设十年后的你回看这件事，会给出什么建议',
+      '用"如果是我最好的朋友遇到这件事"来重述问题',
+      '列出这个问题的反面，看看它带来了什么新信息',
+    ],
+    followUp: '如果这个问题根本不是问题，那它可能是什么？',
+  },
+  default: {
+    perspective: '这是一个值得认真对待的话题。作为与你互补的视角，我建议我们一起把它拆开来看，找到你真正在意的东西。',
+    suggestions: [
+      '试着把想法写下来，理清自己的真实诉求',
+      '找到这件事里你能控制的部分，先行动起来',
+      '保持开放心态，允许答案晚一点出现',
+    ],
+    followUp: '你希望从这次对话里带走什么？',
+  },
+}
 
-【建议】
-建议多方收集信息，谨慎考虑后再做决定。`
+function detectScenario(text: string): string {
+  if (/决定|决策|选择|怎么办|纠结|迷茫|犹豫/.test(text)) return 'decision'
+  if (/压力|焦虑|烦|累|难过|情绪|心情|生气|委屈|孤独|失眠|抑郁/.test(text)) return 'emotion'
+  if (/朋友|同事|伴侣|家人|关系|吵架|相处|分手|父母/.test(text)) return 'relationship'
+  if (/目标|计划|规划|梦想|愿望|想要|未来|改变/.test(text)) return 'goal'
+  if (/角度|思维|想法|思考|视角/.test(text)) return 'perspective'
+  return 'default'
+}
+
+function generateMockResponse(text: string): ChatResponse {
+  const scenario = detectScenario(text)
+  const template = scenarioTemplates[scenario]
+  const structured: StructuredReply = {
+    perspective: template.perspective,
+    suggestions: [...template.suggestions],
+    followUpQuestion: template.followUp,
   }
-  
-  const responses = [
-    '这是一个很有趣的想法！从另一个角度来看，或许我们可以考虑...',
-    '我理解你的感受。让我从一个不同的视角来帮你分析一下。',
-    '作为你的互补视角，我认为这个问题可以从多个方面来思考。',
-    '很有意思的思路！让我补充一些你可能没有考虑到的角度。',
-    '我注意到你似乎在纠结这个问题。让我们换个方式来看看。',
-  ]
-  
-  const randomIndex = Math.floor(Math.random() * responses.length)
-  return `${responses[randomIndex]}\n\n根据你说的情况，我建议你可以尝试从另一个角度看待这个问题。`
+  return { text: formatStructuredText(structured), structured }
 }
 
-function checkDecisionRequest(text: string): boolean {
-  const keywords = ['决定', '决策', '选择', '怎么办', '纠结', '建议', '迷茫', '帮我']
-  return keywords.some(k => text.includes(k))
+// ---------- 记忆层 ----------
+
+const factPatterns = ['我喜欢', '我不喜欢', '我是', '我在', '我最近', '我经常', '我打算', '我想要', '我希望', '我的工作', '我的目标', '我担心', '我害怕']
+
+function maybeExtractUserFact(text: string) {
+  const hit = factPatterns.find(p => text.includes(p))
+  if (hit) {
+    const fact = text.length > 60 ? text.slice(0, 60) + '…' : text
+    personaStore.addUserFact(fact)
+  }
 }
+
+// ---------- 其他 ----------
 
 function scrollToBottom() {
   setTimeout(() => {
@@ -387,9 +623,18 @@ function scrollToBottom() {
 }
 
 function updateComplementLevel(e: any) {
-  complementLevel.value = e.detail.value
-  if (personaStore.activePersona) {
-    personaStore.updateComplementLevel(complementLevel.value)
+  const target = e.detail.value
+  const persona = personaStore.activePersona
+  if (persona) {
+    const ok = personaStore.updateComplementLevel(target)
+    if (ok) {
+      complementLevel.value = target
+    } else {
+      complementLevel.value = persona.complementLevel
+      uni.showToast({ title: '互补度每月仅可调整一次', icon: 'none' })
+    }
+  } else {
+    complementLevel.value = target
   }
 }
 
@@ -557,6 +802,52 @@ function goBack() {
   color: #333333;
   line-height: 1.6;
   white-space: pre-wrap;
+}
+
+.suggestion-list {
+  margin-top: 24rpx;
+}
+
+.suggestion-item {
+  display: flex;
+  align-items: flex-start;
+  background: rgba(102, 126, 234, 0.08);
+  border-radius: 16rpx;
+  padding: 16rpx 20rpx;
+  margin-bottom: 12rpx;
+}
+
+.suggestion-index {
+  width: 36rpx;
+  height: 36rpx;
+  line-height: 36rpx;
+  text-align: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #ffffff;
+  border-radius: 50%;
+  font-size: 24rpx;
+  flex-shrink: 0;
+  margin-right: 16rpx;
+}
+
+.suggestion-text {
+  flex: 1;
+  font-size: 28rpx;
+  color: #444444;
+  line-height: 1.5;
+}
+
+.follow-up {
+  margin-top: 24rpx;
+  padding: 20rpx 24rpx;
+  background: rgba(118, 75, 162, 0.08);
+  border-radius: 16rpx;
+}
+
+.follow-up-text {
+  font-size: 28rpx;
+  color: #764ba2;
+  line-height: 1.5;
 }
 
 .message-time {
