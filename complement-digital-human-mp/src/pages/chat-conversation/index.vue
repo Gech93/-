@@ -54,8 +54,8 @@
               <text class="follow-up-text">💬 {{ msg.structured.followUpQuestion }}</text>
             </view>
             <view class="feedback-row">
-              <text class="feedback-btn" @click="handleFeedback(true)">👍 有帮助</text>
-              <text class="feedback-btn" @click="handleFeedback(false)">🤔 没感觉</text>
+              <text class="feedback-btn" @click="handleFeedback(true, msg)">👍 有帮助</text>
+              <text class="feedback-btn" @click="handleFeedback(false, msg)">🤔 没感觉</text>
             </view>
           </template>
           <template v-else>
@@ -478,6 +478,20 @@ function buildSystemPrompt(): string {
     parts.push(`【你对用户的行为画像】${describeBehaviorProfile(behavior)}`)
   }
 
+  const feedback = persona?.feedback
+  const usefulSamples = feedback?.usefulSamples || []
+  const missSamples = feedback?.missSamples || []
+  if (usefulSamples.length) {
+    parts.push('')
+    parts.push('【用户的认可记忆】用户曾对以下视角标记「有帮助」，请继续保持这类输出风格与视角深度：')
+    usefulSamples.slice(0, 3).forEach(s => parts.push(`- ${s.text}（被认可 ${s.count} 次）`))
+  }
+  if (missSamples.length) {
+    parts.push('')
+    parts.push('【用户的调整记忆】用户曾对以下表述标记「没感觉」，请避免类似泛泛而谈：')
+    missSamples.slice(0, 3).forEach(s => parts.push(`- ${s.text}（${s.count} 次）`))
+  }
+
   if (memory && (memory.summary || (memory.userFacts && memory.userFacts.length))) {
     parts.push('')
     parts.push('【你对用户的记忆】')
@@ -743,8 +757,9 @@ function updateComplementLevel(e: any) {
   }
 }
 
-function handleFeedback(useful: boolean) {
-  personaStore.recordFeedback(useful)
+function handleFeedback(useful: boolean, msg?: Message) {
+  const sample = msg?.structured?.perspective || ''
+  personaStore.recordFeedback(useful, sample)
   uni.showToast({
     title: useful ? '收到，我会保持这种视角' : '收到，我会尝试换种方式',
     icon: 'none'

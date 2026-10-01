@@ -103,6 +103,17 @@
           <text class="stat-label">没感觉</text>
         </view>
       </view>
+      <view class="memory-list" v-if="persona.feedback.usefulSamples.length">
+        <text class="memory-title">已记住的视角（会在后续对话中延续）</text>
+        <view class="memory-item" v-for="(s, i) in persona.feedback.usefulSamples.slice(0, 3)" :key="i">
+          <text class="memory-icon">👍</text>
+          <text class="memory-text">{{ s.text }}</text>
+          <text class="memory-count">×{{ s.count }}</text>
+        </view>
+      </view>
+      <view class="memory-empty" v-else>
+        <text>还没有点赞过的视角。去对话里给「有帮助」的回复点个👍，互补人格会记住并延续这种风格。</text>
+      </view>
     </view>
 
     <view class="bottom-actions">
@@ -545,6 +556,60 @@ function goBack() {
   width: 2rpx;
   height: 80rpx;
   background: #e0e0e0;
+}
+
+.memory-list {
+  margin-top: 32rpx;
+  border-top: 1rpx solid #f0f0f0;
+  padding-top: 24rpx;
+}
+
+.memory-title {
+  display: block;
+  font-size: 26rpx;
+  color: #764ba2;
+  font-weight: bold;
+  margin-bottom: 16rpx;
+}
+
+.memory-item {
+  display: flex;
+  align-items: center;
+  background: rgba(102, 126, 234, 0.06);
+  border-radius: 16rpx;
+  padding: 16rpx 20rpx;
+  margin-bottom: 12rpx;
+}
+
+.memory-icon {
+  font-size: 26rpx;
+  margin-right: 12rpx;
+  flex-shrink: 0;
+}
+
+.memory-text {
+  flex: 1;
+  font-size: 26rpx;
+  color: #444444;
+  line-height: 1.4;
+}
+
+.memory-count {
+  font-size: 24rpx;
+  color: #667eea;
+  font-weight: bold;
+  margin-left: 12rpx;
+  flex-shrink: 0;
+}
+
+.memory-empty {
+  margin-top: 24rpx;
+  padding: 24rpx;
+  background: #f9f9f9;
+  border-radius: 16rpx;
+  font-size: 24rpx;
+  color: #999999;
+  line-height: 1.6;
 }
 
 .bottom-actions {

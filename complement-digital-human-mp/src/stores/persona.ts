@@ -405,6 +405,18 @@ const defaultCommunicationStyle: CommunicationStyle = {
   signature: '回复中常给出可执行的建议',
 }
 
+export interface FeedbackSample {
+  text: string
+  count: number
+}
+
+export interface PersonaFeedback {
+  useful: number
+  miss: number
+  usefulSamples: FeedbackSample[]
+  missSamples: FeedbackSample[]
+}
+
 interface Persona {
   id: string
   name: string
@@ -424,7 +436,7 @@ interface Persona {
   bigFiveScores: BigFiveScores
   complementBigFive: BigFiveScores
   behaviorProfile: BehaviorProfile | null
-  feedback: { useful: number; miss: number }
+  feedback: PersonaFeedback
 }
 
 const keyOf: Record<string, keyof MbtiScores> = { E: 'E', I: 'E', S: 'S', N: 'S', T: 'T', F: 'T', J: 'J', P: 'J' }
@@ -555,7 +567,12 @@ function createStore() {
       bigFiveScores: p.bigFiveScores || { O: 50, C: 50, E: 50, A: 50, N: 50 },
       complementBigFive: p.complementBigFive || { O: 50, C: 50, E: 50, A: 50, N: 50 },
       behaviorProfile: p.behaviorProfile || null,
-      feedback: p.feedback || { useful: 0, miss: 0 },
+      feedback: {
+        useful: p.feedback?.useful || 0,
+        miss: p.feedback?.miss || 0,
+        usefulSamples: p.feedback?.usefulSamples || [],
+        missSamples: p.feedback?.missSamples || [],
+      },
     }
   }
 
@@ -612,7 +629,7 @@ function createStore() {
         bigFiveProfile.value?.confidence ?? 100
       ),
       behaviorProfile: null,
-      feedback: { useful: 0, miss: 0 },
+      feedback: { useful: 0, miss: 0, usefulSamples: [], missSamples: [] },
     }
 
     personas.value.push(newPersona)
@@ -740,11 +757,23 @@ function createStore() {
     saveToStorage()
   }
 
-  function recordFeedback(useful: boolean) {
+  function rememberSample(samples: FeedbackSample[], text: string) {
+    const trimmed = text.length > 60 ? text.slice(0, 60) + '…' : text
+    const existing = samples.find(s => s.text === trimmed)
+    if (existing) existing.count += 1
+    else samples.push({ text: trimmed, count: 1 })
+  }
+
+  function recordFeedback(useful: boolean, sampleText = '') {
     const persona = activePersona.value
     if (!persona) return
-    if (useful) persona.feedback.useful += 1
-    else persona.feedback.miss += 1
+    if (useful) {
+      persona.feedback.useful += 1
+      if (sampleText) rememberSample(persona.feedback.usefulSamples, sampleText)
+    } else {
+      persona.feedback.miss += 1
+      if (sampleText) rememberSample(persona.feedback.missSamples, sampleText)
+    }
     saveToStorage()
   }
 
