@@ -255,8 +255,8 @@ function handleNext() {
       })
       
       setTimeout(() => {
-        uni.navigateTo({
-          url: '/pages/persona-list/index'
+        uni.redirectTo({
+          url: `/pages/persona-profile/index?id=${newPersona.id}`
         })
       }, 1000)
     }

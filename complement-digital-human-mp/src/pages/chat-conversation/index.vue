@@ -26,6 +26,8 @@
             <text class="suggestion-chip" @click="quickSend('我需要做一个重要决定')">重要决定</text>
             <text class="suggestion-chip" @click="quickSend('分享一下今天的心情')">今天心情</text>
             <text class="suggestion-chip" @click="quickSend('帮我从另一个角度思考问题')">换个角度</text>
+            <text class="suggestion-chip" @click="quickSend('我正在考虑职业转型，想听听你的看法')">职业转型</text>
+            <text class="suggestion-chip" @click="quickSend('我和朋友最近有点矛盾，不知道怎么处理')">关系冲突</text>
           </view>
         </view>
       </view>
@@ -50,6 +52,10 @@
             </view>
             <view class="follow-up" v-if="msg.structured.followUpQuestion">
               <text class="follow-up-text">💬 {{ msg.structured.followUpQuestion }}</text>
+            </view>
+            <view class="feedback-row">
+              <text class="feedback-btn" @click="handleFeedback(true)">👍 有帮助</text>
+              <text class="feedback-btn" @click="handleFeedback(false)">🤔 没感觉</text>
             </view>
           </template>
           <template v-else>
@@ -80,6 +86,14 @@
           activeColor="#667eea"
         />
         <text class="slider-value">{{ complementLevel }}%</text>
+      </view>
+      <view class="slider-guide">
+        <text class="guide-item" :class="{ active: complementLevel <= 40 }">偏像你</text>
+        <text class="guide-arrow">·</text>
+        <text class="guide-item" :class="{ active: complementLevel > 40 && complementLevel < 80 }">平衡</text>
+        <text class="guide-arrow">·</text>
+        <text class="guide-item" :class="{ active: complementLevel >= 80 }">强互补</text>
+        <text class="guide-hint" v-if="remainDays > 0">本月已调整，{{ remainDays }} 天后可再调</text>
       </view>
 
       <view class="input-row">
@@ -174,6 +188,7 @@ const personaMbti = ref('AI')
 const showApiKeyModal = ref(false)
 const apiKey = ref('')
 const useDeepSeek = ref(false)
+const remainDays = ref(0)
 
 const getStorageKey = () => {
   const personaId = personaStore.activePersona?.id || 'default'
@@ -186,6 +201,7 @@ onMounted(() => {
     personaName.value = activePersona.name
     personaMbti.value = activePersona.complementMbti
     complementLevel.value = activePersona.complementLevel
+    remainDays.value = personaStore.getRemainDays(activePersona)
   }
   
   loadApiSettings()
@@ -713,13 +729,26 @@ function updateComplementLevel(e: any) {
     const ok = personaStore.updateComplementLevel(target)
     if (ok) {
       complementLevel.value = target
+      remainDays.value = personaStore.getRemainDays(persona)
     } else {
       complementLevel.value = persona.complementLevel
-      uni.showToast({ title: '互补度每月仅可调整一次', icon: 'none' })
+      remainDays.value = personaStore.getRemainDays(persona)
+      uni.showToast({
+        title: remainDays.value > 0 ? `本月仅可调整一次，剩 ${remainDays.value} 天` : '互补度每月仅可调整一次',
+        icon: 'none'
+      })
     }
   } else {
     complementLevel.value = target
   }
+}
+
+function handleFeedback(useful: boolean) {
+  personaStore.recordFeedback(useful)
+  uni.showToast({
+    title: useful ? '收到，我会保持这种视角' : '收到，我会尝试换种方式',
+    icon: 'none'
+  })
 }
 
 function goBack() {
@@ -934,6 +963,21 @@ function goBack() {
   line-height: 1.5;
 }
 
+.feedback-row {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 24rpx;
+}
+
+.feedback-btn {
+  padding: 12rpx 28rpx;
+  border-radius: 32rpx;
+  background: #f5f5f5;
+  color: #666666;
+  font-size: 26rpx;
+  border: 1rpx solid #eeeeee;
+}
+
 .message-time {
   display: block;
   font-size: 24rpx;
@@ -1006,6 +1050,37 @@ function goBack() {
   font-weight: bold;
   min-width: 100rpx;
   text-align: right;
+}
+
+.slider-guide {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 32rpx;
+}
+
+.guide-item {
+  font-size: 24rpx;
+  color: #bbbbbb;
+  padding: 6rpx 16rpx;
+  border-radius: 24rpx;
+}
+
+.guide-item.active {
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
+  font-weight: bold;
+}
+
+.guide-arrow {
+  font-size: 24rpx;
+  color: #dddddd;
+}
+
+.guide-hint {
+  font-size: 24rpx;
+  color: #ff9800;
+  margin-left: 16rpx;
 }
 
 .input-row {

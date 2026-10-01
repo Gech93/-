@@ -27,6 +27,12 @@
       }
     },
     {
+      "path": "pages/persona-profile/index",
+      "style": {
+        "navigationBarTitleText": "互补人格档案"
+      }
+    },
+    {
       "path": "pages/chat-list/index",
       "style": {
         "navigationBarTitleText": "对话"

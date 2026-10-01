@@ -51,7 +51,7 @@ onMounted(() => {
 function selectPersona(persona: any) {
   personaStore.switchPersona(persona.id)
   uni.navigateTo({
-    url: '/pages/chat-list/index'
+    url: `/pages/persona-profile/index?id=${persona.id}`
   })
 }
 

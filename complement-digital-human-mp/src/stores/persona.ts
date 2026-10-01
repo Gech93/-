@@ -424,6 +424,7 @@ interface Persona {
   bigFiveScores: BigFiveScores
   complementBigFive: BigFiveScores
   behaviorProfile: BehaviorProfile | null
+  feedback: { useful: number; miss: number }
 }
 
 const keyOf: Record<string, keyof MbtiScores> = { E: 'E', I: 'E', S: 'S', N: 'S', T: 'T', F: 'T', J: 'J', P: 'J' }
@@ -554,6 +555,7 @@ function createStore() {
       bigFiveScores: p.bigFiveScores || { O: 50, C: 50, E: 50, A: 50, N: 50 },
       complementBigFive: p.complementBigFive || { O: 50, C: 50, E: 50, A: 50, N: 50 },
       behaviorProfile: p.behaviorProfile || null,
+      feedback: p.feedback || { useful: 0, miss: 0 },
     }
   }
 
@@ -610,6 +612,7 @@ function createStore() {
         bigFiveProfile.value?.confidence ?? 100
       ),
       behaviorProfile: null,
+      feedback: { useful: 0, miss: 0 },
     }
 
     personas.value.push(newPersona)
@@ -737,6 +740,14 @@ function createStore() {
     saveToStorage()
   }
 
+  function recordFeedback(useful: boolean) {
+    const persona = activePersona.value
+    if (!persona) return
+    if (useful) persona.feedback.useful += 1
+    else persona.feedback.miss += 1
+    saveToStorage()
+  }
+
   function saveToStorage() {
     try {
       const data = {
@@ -848,6 +859,7 @@ function createStore() {
     addUserFact,
     addMemoryFact,
     updateBehaviorProfile,
+    recordFeedback,
     recordConversation,
     loadFromStorage,
     resetTest,
