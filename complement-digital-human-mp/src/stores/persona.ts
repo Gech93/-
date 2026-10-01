@@ -238,6 +238,7 @@ export interface MemoryFact {
   importance: number
   category: 'preference' | 'identity' | 'plan' | 'emotion' | 'work' | 'other'
   createdAt: string
+  lastAt: string
 }
 
 export function bigramSet(text: string): Set<string> {
@@ -262,9 +263,10 @@ export function bigramJaccard(a: string, b: string): number {
 
 export function findRelevantFacts(facts: MemoryFact[], query: string, topK = 3): MemoryFact[] {
   return facts
+    .filter(f => factMemoryStrength(f) >= FACT_MIN_STRENGTH)
     .map(f => ({
       fact: f,
-      score: bigramJaccard(f.content, query) + bigramJaccard(f.keywords.join(' '), query) + f.importance * 0.01,
+      score: bigramJaccard(f.content, query) + bigramJaccard(f.keywords.join(' '), query) + factMemoryStrength(f) * 0.01,
     }))
     .filter(item => item.score > 0.1)
     .sort((a, b) => b.score - a.score)
@@ -435,6 +437,35 @@ function normalizeFeedbackSample(s: any): FeedbackSample {
   }
 }
 
+// 事实记忆衰减：重要度随"上次被提到"的时间半衰衰减，久未回顾的记忆逐渐被遗忘
+export const FACT_HALF_LIFE_DAYS = 30
+export const FACT_MIN_STRENGTH = 0.5
+
+export function factMemoryStrength(fact: MemoryFact): number {
+  const days = Math.max(0, (Date.now() - new Date(fact.lastAt).getTime()) / (24 * 60 * 60 * 1000))
+  return fact.importance * Math.pow(0.5, days / FACT_HALF_LIFE_DAYS)
+}
+
+function normalizeMemoryFact(s: any): MemoryFact {
+  return {
+    id: s.id,
+    content: s.content,
+    keywords: s.keywords || [],
+    importance: s.importance ?? 3,
+    category: s.category || 'other',
+    createdAt: s.createdAt || new Date().toISOString(),
+    lastAt: s.lastAt || s.createdAt || new Date().toISOString(),
+  }
+}
+
+function forgetDecayedFacts(facts: MemoryFact[]): void {
+  for (let i = facts.length - 1; i >= 0; i--) {
+    if (factMemoryStrength(facts[i]) < FACT_MIN_STRENGTH) {
+      facts.splice(i, 1)
+    }
+  }
+}
+
 interface Persona {
   id: string
   name: string
@@ -579,7 +610,7 @@ function createStore() {
       isActive: p.isActive,
       tags: p.tags || [],
       communicationStyle: p.communicationStyle || defaultCommunicationStyle,
-      memory: p.memory ? { summary: p.memory.summary || '', userFacts: p.memory.userFacts || [], facts: p.memory.facts || [] } : { summary: '', userFacts: [], facts: [] },
+      memory: p.memory ? { summary: p.memory.summary || '', userFacts: p.memory.userFacts || [], facts: (p.memory.facts || []).map(normalizeMemoryFact) } : { summary: '', userFacts: [], facts: [] },
       confidence: p.confidence ?? 0,
       mbtiScores: p.mbtiScores || { E: 50, S: 50, T: 50, J: 50 },
       bigFiveScores: p.bigFiveScores || { O: 50, C: 50, E: 50, A: 50, N: 50 },
@@ -742,9 +773,12 @@ function createStore() {
     if (!persona || !content) return
     const trimmed = content.trim()
     if (!trimmed) return
+    forgetDecayedFacts(persona.memory.facts)
+    const now = new Date().toISOString()
     const existing = persona.memory.facts.find(f => f.content === trimmed)
     if (existing) {
       existing.importance = Math.min(5, existing.importance + 1)
+      existing.lastAt = now
     } else {
       persona.memory.facts.push({
         id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -752,7 +786,8 @@ function createStore() {
         keywords: trimmed.replace(/[，。！？,.!?]/g, ' ').split(/\s+/).filter(w => w.length >= 2).slice(0, 4),
         importance,
         category,
-        createdAt: new Date().toISOString(),
+        createdAt: now,
+        lastAt: now,
       })
       if (persona.memory.facts.length > 50) persona.memory.facts.shift()
     }

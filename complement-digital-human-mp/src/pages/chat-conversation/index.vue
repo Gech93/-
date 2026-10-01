@@ -154,7 +154,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { usePersonaStore, findRelevantFacts, bigFiveMeta, bigFiveDims, adjustBigFiveWithBehavior, feedbackSampleStrength, FEEDBACK_MIN_STRENGTH } from '../../stores/persona'
+import { usePersonaStore, findRelevantFacts, bigFiveMeta, bigFiveDims, adjustBigFiveWithBehavior, feedbackSampleStrength, FEEDBACK_MIN_STRENGTH, factMemoryStrength } from '../../stores/persona'
 
 interface StructuredReply {
   perspective: string
@@ -515,7 +515,7 @@ function buildSystemPrompt(): string {
     if (relevant.length) {
       parts.push('')
       parts.push('【与当前话题相关的用户经历/偏好】')
-      relevant.forEach(f => parts.push(`- ${f.content}（重要度 ${f.importance}/5）`))
+      relevant.forEach(f => parts.push(`- ${f.content}（记忆强度 ${Math.round(factMemoryStrength(f))}）`))
     }
   }
 
