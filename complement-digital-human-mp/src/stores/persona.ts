@@ -43,19 +43,39 @@ export interface BigFiveQuestion {
   reversed: boolean
   question: string
   options: string[]
+  weight?: number
 }
 
 export const bigFiveQuestions: BigFiveQuestion[] = [
-  { id: 1, dimension: 'O', label: '开放性', reversed: false, question: '我会主动尝试新事物、接触新想法。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'] },
+  { id: 1, dimension: 'O', label: '开放性', reversed: false, question: '我会主动尝试新事物、接触新想法。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 0.9 },
   { id: 2, dimension: 'O', label: '开放性', reversed: true, question: '我更习惯熟悉的做法，不太喜欢改变。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'] },
-  { id: 3, dimension: 'C', label: '尽责性', reversed: false, question: '我会提前规划，并认真把任务完成。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'] },
-  { id: 4, dimension: 'C', label: '尽责性', reversed: true, question: '我经常拖延，把事情拖到最后才做。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'] },
-  { id: 5, dimension: 'E', label: '外向性', reversed: false, question: '在社交场合中我感到精力充沛。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'] },
-  { id: 6, dimension: 'E', label: '外向性', reversed: true, question: '我更享受独处，不太喜欢热闹的场合。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'] },
-  { id: 7, dimension: 'A', label: '宜人性', reversed: false, question: '我乐于助人，容易信任他人。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'] },
-  { id: 8, dimension: 'A', label: '宜人性', reversed: true, question: '与人合作时，我倾向于坚持自己的看法。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'] },
-  { id: 9, dimension: 'N', label: '神经质', reversed: false, question: '我容易感到紧张或焦虑。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'] },
-  { id: 10, dimension: 'N', label: '神经质', reversed: true, question: '面对压力时，我通常能保持平静。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'] },
+  { id: 3, dimension: 'O', label: '开放性', reversed: false, question: '我对哲学、艺术、抽象概念这类话题很感兴趣。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 1.1 },
+  { id: 4, dimension: 'O', label: '开放性', reversed: true, question: '比起充满变化的生活，按部就班更让我安心。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 1.1 },
+  { id: 5, dimension: 'O', label: '开放性', reversed: false, question: '遇到难题时，我喜欢尝试多种不同的解决思路。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 0.9 },
+
+  { id: 6, dimension: 'C', label: '尽责性', reversed: false, question: '我会提前规划，并认真把任务完成。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 0.9 },
+  { id: 7, dimension: 'C', label: '尽责性', reversed: true, question: '我经常拖延，把事情拖到最后才做。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'] },
+  { id: 8, dimension: 'C', label: '尽责性', reversed: false, question: '我的桌面和物品通常摆放得井井有条。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 1.1 },
+  { id: 9, dimension: 'C', label: '尽责性', reversed: true, question: '我常凭一时冲动做事，很少提前想后果。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 0.9 },
+  { id: 10, dimension: 'C', label: '尽责性', reversed: false, question: '答应别人的事，我会尽力兑现。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 1.1 },
+
+  { id: 11, dimension: 'E', label: '外向性', reversed: false, question: '在社交场合中我感到精力充沛。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 0.9 },
+  { id: 12, dimension: 'E', label: '外向性', reversed: true, question: '我更享受独处，不太喜欢热闹的场合。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'] },
+  { id: 13, dimension: 'E', label: '外向性', reversed: false, question: '我能轻松地和陌生人开启话题。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 1.1 },
+  { id: 14, dimension: 'E', label: '外向性', reversed: true, question: '在大群人面前发言会让我很不自在。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 0.9 },
+  { id: 15, dimension: 'E', label: '外向性', reversed: false, question: '聚会时，我常常是带动气氛的那个人。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 1.1 },
+
+  { id: 16, dimension: 'A', label: '宜人性', reversed: false, question: '我乐于助人，容易信任他人。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 0.9 },
+  { id: 17, dimension: 'A', label: '宜人性', reversed: true, question: '与人合作时，我倾向于坚持自己的看法。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'] },
+  { id: 18, dimension: 'A', label: '宜人性', reversed: false, question: '即使不认同对方，我也会先照顾对方的感受。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 1.1 },
+  { id: 19, dimension: 'A', label: '宜人性', reversed: true, question: '为了把事情做好，我可以接受比较强硬的竞争。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 0.9 },
+  { id: 20, dimension: 'A', label: '宜人性', reversed: false, question: '别人向我倾诉时，我通常能耐心听完。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 1.1 },
+
+  { id: 21, dimension: 'N', label: '神经质', reversed: false, question: '我容易感到紧张或焦虑。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 0.9 },
+  { id: 22, dimension: 'N', label: '神经质', reversed: true, question: '面对压力时，我通常能保持平静。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'] },
+  { id: 23, dimension: 'N', label: '神经质', reversed: false, question: '一点小麻烦就能让我的情绪波动好一阵。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 1.1 },
+  { id: 24, dimension: 'N', label: '神经质', reversed: true, question: '我很少因为心事而失眠。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 0.9 },
+  { id: 25, dimension: 'N', label: '神经质', reversed: false, question: '我常担心未来可能发生的坏事。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 1.1 },
 ]
 
 export const bigFiveMeta: Record<keyof BigFiveScores, { label: string; low: string; high: string }> = {
@@ -68,15 +88,45 @@ export const bigFiveMeta: Record<keyof BigFiveScores, { label: string; low: stri
 
 export const bigFiveDims = ['O', 'C', 'E', 'A', 'N'] as (keyof BigFiveScores)[]
 
-export const bigFiveOptionScores = [0, 25, 50, 75, 100]
+// 非对称映射：弱化"一般"选项，鼓励表达倾向，避免分数向 50 塌缩
+export const bigFiveOptionScores = [8, 32, 50, 68, 92]
+
+function clampScore(v: number): number {
+  return Math.min(100, Math.max(0, Math.round(v)))
+}
+
+function computeDimensionConsistency(answers: Record<number, number>): Record<keyof BigFiveScores, number> {
+  const result = {} as Record<keyof BigFiveScores, number>
+  bigFiveDims.forEach(d => {
+    const forward: number[] = []
+    const reverse: number[] = []
+    Object.entries(answers).forEach(([qid, optionIndex]) => {
+      const q = bigFiveQuestions.find(item => item.id === parseInt(qid))
+      if (!q || q.dimension !== d) return
+      const raw = bigFiveOptionScores[optionIndex] ?? 50
+      const scored = q.reversed ? 100 - raw : raw
+      if (q.reversed) reverse.push(scored)
+      else forward.push(scored)
+    })
+    // 一致性 = 正题得分与反题反转得分越接近越一致；只有单侧题目时视为一致
+    if (forward.length && reverse.length) {
+      const avgF = forward.reduce((a, b) => a + b, 0) / forward.length
+      const avgR = reverse.reduce((a, b) => a + b, 0) / reverse.length
+      result[d] = Math.max(0, Math.min(1, 1 - Math.abs(avgF - avgR) / 100))
+    } else {
+      result[d] = 1
+    }
+  })
+  return result
+}
 
 export function calculateBigFiveProfile(answers: Record<number, number>): BigFiveProfile {
-  const accum: Record<keyof BigFiveScores, { sum: number; count: number }> = {
-    O: { sum: 0, count: 0 },
-    C: { sum: 0, count: 0 },
-    E: { sum: 0, count: 0 },
-    A: { sum: 0, count: 0 },
-    N: { sum: 0, count: 0 },
+  const accum: Record<keyof BigFiveScores, { sum: number; weight: number }> = {
+    O: { sum: 0, weight: 0 },
+    C: { sum: 0, weight: 0 },
+    E: { sum: 0, weight: 0 },
+    A: { sum: 0, weight: 0 },
+    N: { sum: 0, weight: 0 },
   }
 
   Object.entries(answers).forEach(([qid, optionIndex]) => {
@@ -84,16 +134,22 @@ export function calculateBigFiveProfile(answers: Record<number, number>): BigFiv
     if (!q) return
     let score = bigFiveOptionScores[optionIndex] ?? 50
     if (q.reversed) score = 100 - score
-    accum[q.dimension].sum += score
-    accum[q.dimension].count += 1
+    const w = q.weight ?? 1
+    accum[q.dimension].sum += score * w
+    accum[q.dimension].weight += w
   })
 
   const scores = {} as BigFiveScores
   bigFiveDims.forEach(d => {
-    scores[d] = accum[d].count > 0 ? Math.round(accum[d].sum / accum[d].count) : 50
+    scores[d] = accum[d].weight > 0 ? clampScore(accum[d].sum / accum[d].weight) : 50
   })
 
-  const confidence = Math.round(bigFiveDims.reduce((a, d) => a + Math.abs(scores[d] - 50) * 2, 0) / 5)
+  // 强度分：各维偏离 50 的程度
+  const intensity = bigFiveDims.reduce((a, d) => a + Math.abs(scores[d] - 50) * 2, 0) / 5
+  // 一致性分：正/反题作答矛盾会拉低可信度
+  const consistencies = computeDimensionConsistency(answers)
+  const consistency = bigFiveDims.reduce((a, d) => a + consistencies[d], 0) / 5
+  const confidence = Math.round(intensity * consistency)
 
   const descriptions = {} as Record<keyof BigFiveScores, string>
   bigFiveDims.forEach(d => {
@@ -104,13 +160,65 @@ export function calculateBigFiveProfile(answers: Record<number, number>): BigFiv
   return { scores, confidence, descriptions }
 }
 
-export function calculateComplementBigFive(scores: BigFiveScores, level = 50): BigFiveScores {
-  const ratio = Math.min(100, Math.max(0, level)) / 100
+// 获取 MBTI 互补时被翻转的字母集合（复用翻转逻辑，供大五一致性约束使用）
+export function getFlippedMbtiDims(mbti: string, complementLevel = 50, scores?: MbtiScores): Set<string> {
+  const dims = mbti.split('')
+  const level = Math.min(100, Math.max(0, complementLevel))
+  const flipCount = Math.round((level / 100) * 4)
+  const firmness = scores ? dims.map(d => Math.abs(scores[keyOf[d]] - 50)) : [0, 0, 0, 0]
+  const flipOrder = [0, 1, 2, 3].sort((a, b) => firmness[a] - firmness[b])
+  return new Set(flipOrder.slice(0, flipCount).map(i => dims[i]))
+}
+
+// MBTI 翻转方向 → 大五维度约束（互补人格方向应保持一致）
+const mbtiFlipRule: Record<string, { dim: keyof BigFiveScores; dir: 1 | -1 }> = {
+  E: { dim: 'E', dir: -1 }, // 翻 E → I(内向) → 大五 E 低
+  I: { dim: 'E', dir: 1 },  // 翻 I → E(外向) → 大五 E 高
+  S: { dim: 'O', dir: -1 }, // 翻 S → N(直觉) → 大五 O 低
+  N: { dim: 'O', dir: 1 },  // 翻 N → S(实感) → 大五 O 高
+  T: { dim: 'A', dir: -1 }, // 翻 T → F(情感) → 大五 A 低
+  F: { dim: 'A', dir: 1 },  // 翻 F → T(思维) → 大五 A 高
+  J: { dim: 'C', dir: 1 },  // 翻 J → P(随性) → 大五 C 高
+  P: { dim: 'C', dir: -1 }, // 翻 P → J(自律) → 大五 C 低
+}
+
+export function calculateComplementBigFive(
+  scores: BigFiveScores,
+  level = 50,
+  mbtiContext?: { mbtiType?: string; mbtiScores?: MbtiScores },
+  confidence = 100
+): BigFiveScores {
+  const ratio = Math.min(1, Math.max(0, level / 100))
+  // 置信度加权：测评不可靠时减弱互补偏移幅度
+  const trust = Math.min(1, Math.max(0, confidence / 100))
+  const magnitude = ratio * (0.4 + 0.6 * trust)
+
   const result = {} as BigFiveScores
   bigFiveDims.forEach(d => {
     const user = scores[d]
-    result[d] = Math.round(Math.min(100, Math.max(0, user + (100 - 2 * user) * ratio)))
+    if (d === 'N') {
+      // N 维特殊处理：互补人格只向"情绪稳定"方向移动，永不制造高焦虑
+      result[d] = clampScore(user - user * magnitude * 0.5)
+      if (result[d] > 60) result[d] = 60
+    } else {
+      // 边界收缩：镜像点向 50 拉近（×0.75），互补人格落在 20~80 的可对话区间
+      const mirror = 100 - user
+      const effective = 50 + (mirror - 50) * 0.75
+      result[d] = clampScore(user + (effective - user) * magnitude)
+    }
   })
+
+  // MBTI ↔ 大五一致性约束：被 MBTI 翻转的维度，大五互补方向必须一致
+  if (mbtiContext?.mbtiType) {
+    const flipped = getFlippedMbtiDims(mbtiContext.mbtiType, level, mbtiContext.mbtiScores)
+    flipped.forEach(letter => {
+      const rule = mbtiFlipRule[letter]
+      if (!rule) return
+      if (rule.dir === -1) result[rule.dim] = Math.min(result[rule.dim], 50)
+      else result[rule.dim] = Math.max(result[rule.dim], 50)
+    })
+  }
+
   return result
 }
 
@@ -218,6 +326,39 @@ export function inferBehaviorFromMessage(message: string): Partial<BehaviorProfi
   return result
 }
 
+// 行为画像校正：用对话观测证据微调静态测评分（贝叶斯式融合），形成"活的"人格输入
+export function adjustBigFiveWithBehavior(
+  scores: BigFiveScores,
+  bp: BehaviorProfile | null,
+  weight = 0.2
+): BigFiveScores {
+  if (!bp) return { ...scores }
+  const evidence = {} as BigFiveScores
+  bigFiveDims.forEach(d => (evidence[d] = 50))
+
+  if (bp.emotionTendency === '焦虑敏感') evidence.N = 75
+  else if (bp.emotionTendency === '积极乐观') { evidence.N = 30; evidence.E = 60 }
+  else if (bp.emotionTendency === '低落需要支持') { evidence.N = 70; evidence.E = 35 }
+  else if (bp.emotionTendency === '情绪易波动') evidence.N = 75
+  else if (bp.emotionTendency === '平稳理性') evidence.N = 30
+
+  if (bp.decisionStyle.includes('犹豫')) evidence.C = 35
+  else if (bp.decisionStyle.includes('果断')) evidence.C = 70
+  else if (bp.decisionStyle.includes('参考')) evidence.A = 70
+  else if (bp.decisionStyle.includes('分析')) evidence.O = 65
+  else if (bp.decisionStyle.includes('综合')) evidence.C = 55
+
+  if (bp.expressionStyle.includes('倾诉')) { evidence.E = 35; evidence.A = 65 }
+  else if (bp.expressionStyle.includes('求建议')) evidence.E = 40
+  else if (bp.expressionStyle.includes('表达')) evidence.E = 60
+
+  const result = {} as BigFiveScores
+  bigFiveDims.forEach(d => {
+    result[d] = clampScore(scores[d] * (1 - weight) + evidence[d] * weight)
+  })
+  return result
+}
+
 export interface CommunicationStyle {
   formality: 'casual' | 'neutral' | 'formal'
   tone: string[]
@@ -297,15 +438,8 @@ const oppositeLetter: Record<string, string> = {
 // 互补距离矩阵：按互补度决定反转的维度数量，且优先反转用户倾向最弱的维度，
 // 保证"互补但可理解"，而不是无条件全部取反
 export function calculateComplementMbti(mbti: string, complementLevel = 50, scores?: MbtiScores): string {
-  const dims = mbti.split('')
-  const level = Math.min(100, Math.max(0, complementLevel))
-  const flipCount = Math.round((level / 100) * 4)
-
-  const firmness = scores ? dims.map(d => Math.abs(scores[keyOf[d]] - 50)) : [0, 0, 0, 0]
-  const flipOrder = [0, 1, 2, 3].sort((a, b) => firmness[a] - firmness[b])
-  const flipped = new Set(flipOrder.slice(0, flipCount))
-
-  return dims.map((d, i) => (flipped.has(i) ? oppositeLetter[d] : d)).join('')
+  const flipped = getFlippedMbtiDims(mbti, complementLevel, scores)
+  return mbti.split('').map(d => (flipped.has(d) ? oppositeLetter[d] : d)).join('')
 }
 
 function computeConfidence(scores: MbtiScores): number {
@@ -469,7 +603,12 @@ function createStore() {
       confidence: profile.confidence,
       mbtiScores: profile.scores,
       bigFiveScores: bfScores,
-      complementBigFive: calculateComplementBigFive(bfScores, complementLevel),
+      complementBigFive: calculateComplementBigFive(
+        bfScores,
+        complementLevel,
+        { mbtiType: profile.type, mbtiScores: profile.scores },
+        bigFiveProfile.value?.confidence ?? 100
+      ),
       behaviorProfile: null,
     }
 
@@ -504,7 +643,12 @@ function createStore() {
     const nextMonth = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
     persona.complementLevel = level
     persona.complementMbti = calculateComplementMbti(persona.mbtiType, level, persona.mbtiScores)
-    persona.complementBigFive = calculateComplementBigFive(persona.bigFiveScores, level)
+    persona.complementBigFive = calculateComplementBigFive(
+      persona.bigFiveScores,
+      level,
+      { mbtiType: persona.mbtiType, mbtiScores: persona.mbtiScores },
+      bigFiveProfile.value?.confidence ?? 100
+    )
     persona.nextModifyTime = nextMonth.toISOString()
     saveToStorage()
 

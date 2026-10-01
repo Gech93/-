@@ -140,7 +140,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { usePersonaStore, findRelevantFacts, bigFiveMeta, bigFiveDims } from '../../stores/persona'
+import { usePersonaStore, findRelevantFacts, bigFiveMeta, bigFiveDims, adjustBigFiveWithBehavior } from '../../stores/persona'
 
 interface StructuredReply {
   perspective: string
@@ -425,13 +425,18 @@ function buildSystemPrompt(): string {
   const style = persona?.communicationStyle
   const memory = persona?.memory
   const behavior = persona?.behaviorProfile
+  // 行为画像校正：静态测评分 + 对话观测证据（贝叶斯式融合），形成动态人格输入
+  const adjustedBigFive = adjustBigFiveWithBehavior(
+    personaStore.bigFiveProfile?.scores || { O: 50, C: 50, E: 50, A: 50, N: 50 },
+    behavior
+  )
 
   const parts: string[] = []
   parts.push(`你是「${persona?.name || '互补AI伙伴'}」，一个与用户人格互补的 AI 伙伴。`)
   parts.push(`用户人格类型：${userMbti}${profileText ? `（各维度强度：${profileText}）` : ''}`)
   parts.push(`你的互补人格类型：${complementMbti}，互补度 ${level}%（互补度越高，你与用户的人格差异越明显）。`)
   if (personaStore.bigFiveProfile) {
-    parts.push(`用户大五人格：${bigFiveText}`)
+    parts.push(`用户大五人格（已结合对话行为动态修正）：${describeBigFiveProfile({ scores: adjustedBigFive })}`)
     if (persona?.complementBigFive) {
       parts.push(`你的大五互补人格：${bigFiveDims.map(d => `${bigFiveMeta[d].label} ${persona.complementBigFive[d]}`).join('，')}`)
     }
@@ -439,7 +444,7 @@ function buildSystemPrompt(): string {
   parts.push('')
   parts.push('【互补维度指引】')
   parts.push(buildComplementGuidance(userMbti, complementMbti))
-  const bfGuidance = buildBigFiveGuidance(personaStore.bigFiveProfile?.scores, persona?.complementBigFive)
+  const bfGuidance = buildBigFiveGuidance(adjustedBigFive, persona?.complementBigFive)
   if (bfGuidance) {
     parts.push('')
     parts.push('【大五互补指引】')

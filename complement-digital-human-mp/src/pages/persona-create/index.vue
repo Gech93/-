@@ -170,7 +170,12 @@ const bigFiveDimList = bigFiveDims
 const complementBigFive = computed(() => {
   const scores = personaStore.bigFiveProfile?.scores
   if (!scores) return null
-  return calculateComplementBigFive(scores, selectedComplementLevel.value)
+  return calculateComplementBigFive(
+    scores,
+    selectedComplementLevel.value,
+    { mbtiType: personaStore.userMbti || undefined, mbtiScores: personaStore.mbtiProfile?.scores },
+    personaStore.bigFiveProfile?.confidence ?? 100
+  )
 })
 
 const bigFiveDimText = computed(() => {
