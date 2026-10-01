@@ -15,11 +15,11 @@
       <text class="switch-icon">▼</text>
     </view>
 
-    <view class="empty-state" v-if="!hasConversations">
+    <view class="empty-state" v-if="sessionList.length === 0">
       <text class="empty-icon">💬</text>
       <text class="empty-title">开始对话</text>
       <text class="empty-desc">
-        {{ personaStore.activePersona ? '与' + personaStore.activePersona.name + '开始对话吧' : '请先创建数字人' }}
+        {{ personaStore.activePersona ? '与' + personaStore.activePersona.name + '开启第一段对话吧' : '请先创建数字人' }}
       </text>
       <button class="start-chat-btn" @click="startNewChat" v-if="personaStore.activePersona">
         开始对话
@@ -27,6 +27,27 @@
       <button class="start-chat-btn" @click="goToPersona" v-else>
         去创建
       </button>
+    </view>
+
+    <view class="session-list" v-if="sessionList.length > 0">
+      <view
+        v-for="session in sessionList"
+        :key="session.id"
+        class="session-item"
+        @click="openSession(session)"
+      >
+        <view class="session-avatar">
+          <text>{{ session.title.slice(0, 1) }}</text>
+        </view>
+        <view class="session-info">
+          <view class="session-title-row">
+            <text class="session-title">{{ session.title }}</text>
+            <text class="session-time">{{ formatSessionTime(session.updatedAt) }}</text>
+          </view>
+          <text class="session-preview">{{ session.preview || '暂无消息' }}</text>
+        </view>
+        <text class="session-delete" @click.stop="deleteSession(session)">🗑</text>
+      </view>
     </view>
 
     <view class="new-chat-section" v-if="personaStore.activePersona">
@@ -62,30 +83,84 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 import { usePersonaStore } from '../../stores/persona'
+import { ensureSessions, loadSessions, removeSession, type ChatSessionMeta } from '../../utils/chatSessions'
 
 const personaStore = usePersonaStore()
 
 const showPersonaPicker = ref(false)
-const hasConversations = ref(false)
+const sessionList = ref<ChatSessionMeta[]>([])
+
+function refreshSessions() {
+  const persona = personaStore.activePersona
+  sessionList.value = persona ? loadSessions(persona.id) : []
+}
+
+onShow(() => {
+  refreshSessions()
+})
 
 function selectPersona(persona: any) {
   personaStore.switchPersona(persona.id)
   showPersonaPicker.value = false
+  refreshSessions()
 }
 
 function startNewChat() {
-  if (!personaStore.activePersona) {
+  const persona = personaStore.activePersona
+  if (!persona) {
     uni.showToast({
       title: '请先创建数字人',
       icon: 'none'
     })
     return
   }
+  ensureSessions(persona.id)
   uni.navigateTo({
-    url: '/pages/chat-conversation/index'
+    url: '/pages/chat-conversation/index?newSession=1'
   })
+}
+
+function openSession(session: ChatSessionMeta) {
+  uni.navigateTo({
+    url: `/pages/chat-conversation/index?sessionId=${session.id}`
+  })
+}
+
+function deleteSession(session: ChatSessionMeta) {
+  const persona = personaStore.activePersona
+  if (!persona) return
+  uni.showModal({
+    title: '删除会话',
+    content: `确定删除「${session.title}」吗？删除后不可恢复。`,
+    confirmText: '删除',
+    confirmColor: '#e74c3c',
+    success: (res) => {
+      if (res.confirm) {
+        removeSession(persona.id, session.id)
+        refreshSessions()
+        uni.showToast({
+          title: '已删除',
+          icon: 'none'
+        })
+      }
+    }
+  })
+}
+
+function formatSessionTime(timeStr: string): string {
+  const d = new Date(timeStr)
+  const now = new Date()
+  const diffMs = now.getTime() - d.getTime()
+  const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000))
+  if (diffDays <= 0) {
+    return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+  }
+  if (diffDays === 1) return '昨天'
+  if (diffDays < 7) return `${diffDays}天前`
+  return d.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' })
 }
 
 function goToPersona() {
@@ -100,7 +175,7 @@ function goToPersona() {
   min-height: 100vh;
   background: #f5f5f5;
   padding: 32rpx;
-  padding-bottom: 200rpx;
+  padding-bottom: 240rpx;
 }
 
 .header {
@@ -163,7 +238,7 @@ function goToPersona() {
 
 .empty-state {
   text-align: center;
-  padding: 240rpx 40rpx;
+  padding: 200rpx 40rpx;
 }
 
 .empty-icon {
@@ -196,6 +271,81 @@ function goToPersona() {
   font-weight: bold;
   border-radius: 48rpx;
   border: none;
+}
+
+.session-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.session-item {
+  background: #ffffff;
+  border-radius: 32rpx;
+  padding: 32rpx;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05);
+}
+
+.session-avatar {
+  width: 88rpx;
+  height: 88rpx;
+  background: rgba(102, 126, 234, 0.12);
+  border-radius: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 24rpx;
+  font-size: 36rpx;
+  font-weight: bold;
+  color: #667eea;
+  flex-shrink: 0;
+}
+
+.session-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.session-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8rpx;
+}
+
+.session-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #333333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  margin-right: 16rpx;
+}
+
+.session-time {
+  font-size: 24rpx;
+  color: #bbbbbb;
+  flex-shrink: 0;
+}
+
+.session-preview {
+  display: block;
+  font-size: 28rpx;
+  color: #999999;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-delete {
+  font-size: 36rpx;
+  margin-left: 24rpx;
+  padding: 16rpx;
+  flex-shrink: 0;
 }
 
 .new-chat-section {

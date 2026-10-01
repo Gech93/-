@@ -1,0 +1,7 @@
+{
+  "name": "chat-gateway",
+  "version": "1.0.0",
+  "description": "DeepSeek 代理网关：在服务端持有 API Key，客户端通过该云函数调用",
+  "main": "index.js",
+  "dependencies": {}
+}

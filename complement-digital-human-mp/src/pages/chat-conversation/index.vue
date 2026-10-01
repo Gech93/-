@@ -153,13 +153,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { usePersonaStore, findRelevantFacts, bigFiveMeta, bigFiveDims, adjustBigFiveWithBehavior, feedbackSampleStrength, FEEDBACK_MIN_STRENGTH, factMemoryStrength } from '../../stores/persona'
+import { ref } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
+import { usePersonaStore, findRelevantFacts, bigFiveMeta, bigFiveDims, adjustBigFiveWithBehavior, feedbackSampleStrength, FEEDBACK_MIN_STRENGTH, factMemoryStrength, type BehaviorProfile, type MemoryFact } from '../../stores/persona'
+import { createSession, ensureSessions, getMessagesKey, touchSession } from '../../utils/chatSessions'
+
+interface MemoryUpdatePayload {
+  facts?: Array<{ content: string; category?: string }>
+  summary?: string
+  behavior?: Partial<BehaviorProfile>
+}
 
 interface StructuredReply {
   perspective: string
   suggestions: string[]
   followUpQuestion: string
+  memoryUpdates?: MemoryUpdatePayload
 }
 
 interface Message {
@@ -173,6 +182,7 @@ interface Message {
 interface ChatResponse {
   text: string
   structured?: StructuredReply
+  memoryUpdates?: MemoryUpdatePayload
 }
 
 const personaStore = usePersonaStore()
@@ -192,18 +202,36 @@ const remainDays = ref(0)
 
 const getStorageKey = () => {
   const personaId = personaStore.activePersona?.id || 'default'
-  return `chat_messages_${personaId}`
+  return getMessagesKey(personaId, sessionId.value || 'default')
 }
 
-onMounted(() => {
+const sessionId = ref('')
+
+onLoad((options: any) => {
   const activePersona = personaStore.activePersona
   if (activePersona) {
     personaName.value = activePersona.name
     personaMbti.value = activePersona.complementMbti
     complementLevel.value = activePersona.complementLevel
     remainDays.value = personaStore.getRemainDays(activePersona)
+
+    const pid = activePersona.id
+    const sessions = ensureSessions(pid)
+    if (options?.sessionId) {
+      const found = sessions.find((s: any) => s.id === options.sessionId)
+      if (found) sessionId.value = found.id
+    }
+    if (!sessionId.value) {
+      if (options?.newSession === '1') {
+        sessionId.value = createSession(pid).id
+      } else if (sessions.length) {
+        sessionId.value = sessions[0].id
+      } else {
+        sessionId.value = createSession(pid).id
+      }
+    }
   }
-  
+
   loadApiSettings()
   loadMessages()
 })
@@ -248,6 +276,10 @@ function saveMessages() {
       timestamp: msg.timestamp.toISOString()
     }))
     uni.setStorageSync(storageKey, JSON.stringify(dataToSave))
+    const persona = personaStore.activePersona
+    if (persona && sessionId.value) {
+      touchSession(persona.id, sessionId.value, dataToSave)
+    }
   } catch (error) {
     console.error('保存消息失败:', error)
   }
@@ -310,7 +342,9 @@ async function handleSend() {
   try {
     let response: ChatResponse
     
-    if (useDeepSeek.value && apiKey.value) {
+    const gatewayUrl = uni.getStorageSync('cloud_gateway_url')
+    const useProxy = uni.getStorageSync('use_cloud_proxy') === true
+    if ((useDeepSeek.value && apiKey.value) || (useProxy && gatewayUrl)) {
       response = await callDeepSeekAPI(text)
     } else {
       response = generateMockResponse(text)
@@ -326,12 +360,28 @@ async function handleSend() {
     messages.value.push(aiMsg)
     saveMessages()
 
-    // 记忆层：提取用户事实、更新行为画像并记录会话
+    // 记忆层：优先应用 AI 抽取的 memoryUpdates（事实/滚动摘要/行为画像），缺失或无结果时回退旧规则
     const persona = personaStore.activePersona
     if (persona) {
-      persona.memory.summary = text.length > 40 ? text.slice(0, 40) + '…' : text
-      maybeExtractUserFact(text)
-      personaStore.updateBehaviorProfile(text)
+      const aiUpdates = response.memoryUpdates
+      if (aiUpdates?.summary) {
+        persona.memory.summary = aiUpdates.summary.slice(0, 120)
+      } else {
+        persona.memory.summary = text.length > 40 ? text.slice(0, 40) + '…' : text
+      }
+      if (aiUpdates?.facts?.length) {
+        aiUpdates.facts.forEach(f => {
+          personaStore.addMemoryFact(f.content, isFactCategory(f.category) ? f.category : 'other', 4)
+          personaStore.addUserFact(f.content)
+        })
+      } else {
+        maybeExtractUserFact(text)
+      }
+      if (aiUpdates?.behavior) {
+        personaStore.updateBehaviorProfile(text, aiUpdates.behavior)
+      } else {
+        personaStore.updateBehaviorProfile(text)
+      }
       personaStore.recordConversation()
     }
   } catch (error) {
@@ -528,16 +578,21 @@ function buildSystemPrompt(): string {
 
 function buildStructuredInstruction(): string {
   return `请严格按照下面的 JSON 格式回复，不要输出任何 JSON 以外的文字：
-{"perspective":"...","suggestions":["...","...","..."],"followUpQuestion":"..."}
+{"perspective":"...","suggestions":["...","...","..."],"followUpQuestion":"...","memoryUpdates":{"facts":[{"content":"...","category":"..."}],"summary":"...","behavior":{"emotionTendency":"...","decisionStyle":"...","expressionStyle":"...","deepNeed":"..."}}}
 
 字段说明：
 - perspective：从互补人格视角给出的核心分析与洞察（80-150字）
 - suggestions：2-4 条具体、可执行的建议
 - followUpQuestion：1 个引导用户继续思考的苏格拉底式追问
+- memoryUpdates（可选，但请尽量提供）：根据这次用户消息更新你对用户的记忆
+  - facts：0-3 条用户明确表达的事实/偏好/计划/情绪，每条 5-20 字，必须忠实于用户原话，不要臆造；没有可靠事实就返回空数组
+  - facts[].category：preference | identity | plan | emotion | work | other
+  - summary：把此前记忆与本次话题合并，重写为 30-80 字的滚动摘要（第三人称）
+  - behavior：对用户情绪倾向/决策风格/表达方式/深层需求的新认识；某个维度没有新证据就省略该字段，表示保持原样
 
 参考示例（用户 INFJ，互补 ENTP，互补度 60%）：
 用户：我最近工作压力很大，总想辞职。
-{"perspective":"我理解这份疲惫。从更偏直觉(N)和思考(T)的视角看，你真正想逃离的或许不是工作本身，而是价值感缺失。","suggestions":["记录最近一周让你最有成就感的时刻，找到你的价值来源","和2-3位做过类似转型的人聊聊，获取真实参照","把辞职拆成换岗/转行/休息三个子选项分别评估"],"followUpQuestion":"如果明天就能辞职，你第一件想做的事是什么？"}`
+{"perspective":"我理解这份疲惫。从更偏直觉(N)和思考(T)的视角看，你真正想逃离的或许不是工作本身，而是价值感缺失。","suggestions":["记录最近一周让你最有成就感的时刻，找到你的价值来源","和2-3位做过类似转型的人聊聊，获取真实参照","把辞职拆成换岗/转行/休息三个子选项分别评估"],"followUpQuestion":"如果明天就能辞职，你第一件想做的事是什么？","memoryUpdates":{"facts":[{"content":"最近工作压力大，想辞职","category":"emotion"},{"content":"从事技术类工作","category":"work"}],"summary":"用户近期因工作压力大而考虑辞职，从事技术类工作，正处于职业倦怠期，渴望价值感。","behavior":{"emotionTendency":"焦虑敏感","deepNeed":"职业成长与价值认同"}}}`
 }
 
 function parseStructuredReply(content: string): StructuredReply {
@@ -553,10 +608,39 @@ function parseStructuredReply(content: string): StructuredReply {
         ? json.suggestions.map((s: any) => String(s)).filter(Boolean)
         : [],
       followUpQuestion: typeof json.followUpQuestion === 'string' ? json.followUpQuestion : '',
+      memoryUpdates: parseMemoryUpdates(json.memoryUpdates),
     }
   } catch (e) {
     return { perspective: content, suggestions: [], followUpQuestion: '' }
   }
+}
+
+function parseMemoryUpdates(raw: any): MemoryUpdatePayload | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const payload: MemoryUpdatePayload = {}
+  if (Array.isArray(raw.facts)) {
+    payload.facts = raw.facts
+      .map((f: any) => (
+        f && typeof f.content === 'string' && f.content.trim()
+          ? { content: f.content.trim(), category: typeof f.category === 'string' ? f.category : undefined }
+          : null
+      ))
+      .filter((f: any): f is { content: string; category?: string } => !!f)
+      .slice(0, 3)
+  }
+  if (typeof raw.summary === 'string' && raw.summary.trim()) {
+    payload.summary = raw.summary.trim()
+  }
+  if (raw.behavior && typeof raw.behavior === 'object') {
+    const b = raw.behavior
+    const behavior: Partial<BehaviorProfile> = {}
+    if (typeof b.emotionTendency === 'string') behavior.emotionTendency = b.emotionTendency
+    if (typeof b.decisionStyle === 'string') behavior.decisionStyle = b.decisionStyle
+    if (typeof b.expressionStyle === 'string') behavior.expressionStyle = b.expressionStyle
+    if (typeof b.deepNeed === 'string') behavior.deepNeed = b.deepNeed
+    if (Object.keys(behavior).length) payload.behavior = behavior
+  }
+  return payload
 }
 
 function formatStructuredText(reply: StructuredReply): string {
@@ -575,12 +659,6 @@ function formatStructuredText(reply: StructuredReply): string {
 // ---------- DeepSeek API（带对话历史） ----------
 
 async function callDeepSeekAPI(userMessage: string): Promise<ChatResponse> {
-  const apiKeyValue = uni.getStorageSync('deepseek_api_key')
-  
-  if (!apiKeyValue) {
-    throw new Error('未设置 API Key')
-  }
-
   const systemPrompt = buildSystemPrompt()
   const structuredInstruction = buildStructuredInstruction()
   const fullSystem = `${systemPrompt}\n\n${structuredInstruction}`
@@ -591,6 +669,41 @@ async function callDeepSeekAPI(userMessage: string): Promise<ChatResponse> {
     content: m.content,
   }))
 
+  const requestMessages = [
+    { role: 'system', content: fullSystem },
+    ...history,
+    { role: 'user', content: userMessage }
+  ]
+
+  // 优先走云端网关（密钥留在服务端，客户端不暴露）
+  const gatewayUrl = uni.getStorageSync('cloud_gateway_url')
+  const useProxy = uni.getStorageSync('use_cloud_proxy') === true
+  if (useProxy && gatewayUrl) {
+    try {
+      const proxyRes = await uni.request({
+        url: gatewayUrl,
+        method: 'POST',
+        header: { 'Content-Type': 'application/json' },
+        data: { model: 'deepseek-chat', messages: requestMessages },
+        timeout: 30000,
+      })
+      const body = proxyRes.data as any
+      if (proxyRes.statusCode === 200 && body && body.code === 0 && body.data) {
+        const content = body.data.choices[0].message.content
+        const structured = parseStructuredReply(content)
+        return { text: formatStructuredText(structured), structured, memoryUpdates: structured.memoryUpdates }
+      }
+      console.warn('云端网关调用失败，回退直连:', body?.msg || proxyRes.statusCode)
+    } catch (e) {
+      console.warn('云端网关调用异常，回退直连:', e)
+    }
+  }
+
+  const apiKeyValue = uni.getStorageSync('deepseek_api_key')
+  if (!apiKeyValue) {
+    throw new Error('未设置 API Key')
+  }
+
   const response = await uni.request({
     url: 'https://api.deepseek.com/chat/completions',
     method: 'POST',
@@ -600,14 +713,11 @@ async function callDeepSeekAPI(userMessage: string): Promise<ChatResponse> {
     },
     data: {
       model: 'deepseek-chat',
-      messages: [
-        { role: 'system', content: fullSystem },
-        ...history,
-        { role: 'user', content: userMessage }
-      ],
+      messages: requestMessages,
       stream: false,
       response_format: { type: 'json_object' }
-    }
+    },
+    timeout: 30000,
   })
 
   if (response.statusCode !== 200) {
@@ -617,7 +727,7 @@ async function callDeepSeekAPI(userMessage: string): Promise<ChatResponse> {
   const data = response.data as any
   const content = data.choices[0].message.content
   const structured = parseStructuredReply(content)
-  return { text: formatStructuredText(structured), structured }
+  return { text: formatStructuredText(structured), structured, memoryUpdates: structured.memoryUpdates }
 }
 
 // ---------- Mock 模式：场景化模板库 + 苏格拉底式引导 ----------
@@ -706,6 +816,12 @@ function generateMockResponse(text: string): ChatResponse {
 }
 
 // ---------- 记忆层 ----------
+
+const factCategorySet: MemoryFact['category'][] = ['preference', 'identity', 'plan', 'emotion', 'work', 'other']
+
+function isFactCategory(v: any): v is MemoryFact['category'] {
+  return factCategorySet.includes(v)
+}
 
 const factPatterns = ['我喜欢', '我不喜欢', '我是', '我在', '我最近', '我经常', '我打算', '我想要', '我希望', '我的工作', '我的目标', '我担心', '我害怕']
 

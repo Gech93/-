@@ -9,7 +9,7 @@
       
       <view class="setting-item">
         <text class="setting-label">版本</text>
-        <text class="setting-value">v1.0.0</text>
+        <text class="setting-value">{{ appVersion }}</text>
       </view>
       
       <view class="setting-item">
@@ -21,9 +21,48 @@
     <view class="settings-group">
       <text class="group-title">数据管理</text>
       
-      <view class="setting-item" @click="clearData">
-        <text class="setting-label">清除所有数据</text>
+      <view class="setting-item" @click="exportBackup">
+        <text class="setting-label">导出数据备份</text>
         <text class="setting-arrow">→</text>
+      </view>
+      <view class="setting-hint">导出包含人格、测评结果、记忆与全部对话记录</view>
+
+      <view class="setting-item" @click="importBackup">
+        <text class="setting-label">导入数据备份</text>
+        <text class="setting-arrow">→</text>
+      </view>
+      <view class="setting-hint">导入将覆盖当前全部数据，请谨慎操作</view>
+
+      <view class="setting-item" @click="clearConversations">
+        <text class="setting-label">清空全部对话</text>
+        <text class="setting-arrow">→</text>
+      </view>
+      <view class="setting-hint">只删除对话记录，保留人格与记忆</view>
+
+      <view class="setting-item" @click="clearData">
+        <text class="setting-label danger">清除所有数据</text>
+        <text class="setting-arrow">→</text>
+      </view>
+    </view>
+
+    <view class="settings-group">
+      <text class="group-title">AI 服务</text>
+
+      <view class="setting-item">
+        <text class="setting-label">使用云端网关</text>
+        <switch :checked="useCloudProxy" @change="toggleCloudProxy" color="#667eea" />
+      </view>
+      <view class="setting-hint">开启后，AI 请求将经你的 uniCloud 云函数转发，API Key 不再暴露在客户端</view>
+
+      <view class="setting-item column">
+        <text class="setting-label">网关地址</text>
+        <input
+          v-model="gatewayUrl"
+          class="setting-input"
+          placeholder="https://xxx.next.bspapp.com/chat-gateway"
+          @blur="saveGatewayUrl"
+        />
+        <text class="setting-hint">在 uniCloud 控制台部署 chat-gateway 云函数并配置环境变量 DEEPSEEK_API_KEY，然后把云函数 URL 粘贴到这里</text>
       </view>
     </view>
 
@@ -54,9 +93,142 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { usePersonaStore } from '../../stores/persona'
+import { buildBackupJson, importBackupJson, clearAllConversations } from '../../utils/backup'
+import manifest from '../../manifest.json'
 
 const personaStore = usePersonaStore()
+
+const appVersion = `v${manifest.versionName || '1.0.0'}`
+
+const useCloudProxy = ref(uni.getStorageSync('use_cloud_proxy') === true)
+const gatewayUrl = ref(uni.getStorageSync('cloud_gateway_url') || '')
+
+function toggleCloudProxy(e: any) {
+  useCloudProxy.value = e.detail.value
+  uni.setStorageSync('use_cloud_proxy', useCloudProxy.value)
+  uni.showToast({
+    title: useCloudProxy.value ? '已启用云端网关' : '已关闭云端网关',
+    icon: 'none'
+  })
+}
+
+function saveGatewayUrl() {
+  uni.setStorageSync('cloud_gateway_url', gatewayUrl.value.trim())
+  uni.showToast({
+    title: '网关地址已保存',
+    icon: 'none'
+  })
+}
+
+function exportBackup() {
+  const json = buildBackupJson()
+  // #ifdef H5
+  try {
+    const blob = new Blob([json], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `complement-backup-${Date.now()}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    uni.showToast({ title: '备份已下载', icon: 'success' })
+  } catch (e) {
+    uni.showToast({ title: '导出失败', icon: 'none' })
+  }
+  // #endif
+  // #ifndef H5
+  uni.setClipboardData({
+    data: json,
+    success: () => {
+      uni.showToast({ title: '备份已复制，请粘贴保存为 .json 文件', icon: 'none' })
+    }
+  })
+  // #endif
+}
+
+function importBackup() {
+  // #ifdef H5
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = 'application/json,.json'
+  input.onchange = (e: any) => {
+    const file = e.target && e.target.files && e.target.files[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      doImport(String(reader.result || ''))
+    }
+    reader.readAsText(file)
+  }
+  input.click()
+  // #endif
+  // #ifdef MP-WEIXIN
+  uni.chooseMessageFile({
+    count: 1,
+    type: 'file',
+    extension: ['json'],
+    success: (res) => {
+      const file = res.tempFiles && res.tempFiles[0]
+      if (!file) return
+      uni.getFileSystemManager().readFile({
+        filePath: file.path,
+        encoding: 'utf-8',
+        success: (r: any) => {
+          doImport(String(r.data || ''))
+        },
+        fail: () => {
+          uni.showToast({ title: '读取文件失败', icon: 'none' })
+        }
+      })
+    }
+  })
+  // #endif
+}
+
+function doImport(jsonText: string) {
+  if (!jsonText) {
+    uni.showToast({ title: '导入内容为空', icon: 'none' })
+    return
+  }
+  uni.showModal({
+    title: '确认导入',
+    content: '导入将覆盖当前全部数据（人格、测评、记忆与对话），确定继续吗？',
+    confirmText: '覆盖导入',
+    cancelText: '取消',
+    success: (res) => {
+      if (!res.confirm) return
+      const result = importBackupJson(jsonText)
+      if (result.ok) {
+        uni.showToast({ title: '导入成功', icon: 'success' })
+        setTimeout(() => {
+          uni.reLaunch({ url: '/pages/index/index' })
+        }, 800)
+      } else {
+        uni.showToast({ title: result.msg, icon: 'none' })
+      }
+    }
+  })
+}
+
+function clearConversations() {
+  uni.showModal({
+    title: '确认清空',
+    content: '确定要清空全部会话对话记录吗？人格、测评与记忆数据会保留。',
+    success: (res) => {
+      if (res.confirm) {
+        const count = clearAllConversations()
+        uni.showToast({
+          title: count > 0 ? `已清空 ${count} 项对话数据` : '暂无对话数据',
+          icon: 'none'
+        })
+      }
+    }
+  })
+}
 
 function clearData() {
   uni.showModal({
@@ -147,6 +319,10 @@ function goToPersona() {
 .setting-value {
   font-size: 32rpx;
   color: #999999;
+}
+
+.danger {
+  color: #e64340;
 }
 
 .setting-arrow {
