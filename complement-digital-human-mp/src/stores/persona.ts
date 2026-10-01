@@ -429,9 +429,9 @@ export function feedbackSampleStrength(sample: FeedbackSample): number {
   return sample.count * Math.pow(0.5, days / FEEDBACK_HALF_LIFE_DAYS)
 }
 
-function normalizeFeedbackSample(s: any): FeedbackSample {
+function normalizeFeedbackSample(s: Partial<FeedbackSample>): FeedbackSample {
   return {
-    text: s.text,
+    text: s.text || '',
     count: s.count || 1,
     lastAt: s.lastAt || new Date().toISOString(),
   }
@@ -446,10 +446,10 @@ export function factMemoryStrength(fact: MemoryFact): number {
   return fact.importance * Math.pow(0.5, days / FACT_HALF_LIFE_DAYS)
 }
 
-function normalizeMemoryFact(s: any): MemoryFact {
+function normalizeMemoryFact(s: Partial<MemoryFact>): MemoryFact {
   return {
-    id: s.id,
-    content: s.content,
+    id: s.id || '',
+    content: s.content || '',
     keywords: s.keywords || [],
     importance: s.importance ?? 3,
     category: s.category || 'other',
@@ -466,7 +466,7 @@ function forgetDecayedFacts(facts: MemoryFact[]): void {
   }
 }
 
-interface Persona {
+export interface Persona {
   id: string
   name: string
   mbtiType: string
@@ -596,18 +596,18 @@ function createStore() {
     saveToStorage()
   }
 
-  function normalizePersona(p: any): Persona {
+  function normalizePersona(p: Partial<Persona>): Persona {
     return {
-      id: p.id,
-      name: p.name,
-      mbtiType: p.mbtiType,
-      complementMbti: p.complementMbti,
+      id: p.id || '',
+      name: p.name || '',
+      mbtiType: p.mbtiType || '',
+      complementMbti: p.complementMbti || '',
       complementLevel: p.complementLevel ?? 50,
-      createdAt: p.createdAt,
-      nextModifyTime: p.nextModifyTime,
+      createdAt: p.createdAt || new Date().toISOString(),
+      nextModifyTime: p.nextModifyTime || new Date().toISOString(),
       totalConversations: p.totalConversations || 0,
       growthLevel: p.growthLevel || 1,
-      isActive: p.isActive,
+      isActive: p.isActive || false,
       tags: p.tags || [],
       communicationStyle: p.communicationStyle || defaultCommunicationStyle,
       memory: p.memory ? { summary: p.memory.summary || '', userFacts: p.memory.userFacts || [], facts: (p.memory.facts || []).map(normalizeMemoryFact) } : { summary: '', userFacts: [], facts: [] },

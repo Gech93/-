@@ -3,17 +3,29 @@ import { getSessionsKey, getMessagesKey } from './chatSessions'
 
 const APP_MARKER = 'complement-digital-human'
 
-function readStorage(key: string): any {
+interface BackupData {
+  persona_data?: unknown
+  sessions?: Record<string, unknown>
+  messages?: Record<string, Record<string, unknown>>
+  settings?: { use_cloud_proxy?: unknown; cloud_gateway_url?: unknown }
+}
+
+function readStorage<T>(key: string): T | null {
   try {
     const raw = uni.getStorageSync(key)
     if (raw === '' || raw === null || raw === undefined) return null
-    return typeof raw === 'string' ? JSON.parse(raw) : raw
+    if (typeof raw !== 'string') return raw as T
+    try {
+      return JSON.parse(raw) as T
+    } catch (e) {
+      return raw as T
+    }
   } catch (e) {
     return null
   }
 }
 
-function writeStorage(key: string, value: any): void {
+function writeStorage(key: string, value: unknown): void {
   try {
     uni.setStorageSync(key, value)
   } catch (e) {
@@ -49,11 +61,11 @@ function getStorageKeys(): string[] {
 export function buildBackupJson(): string {
   const personaData = readStorage('persona_data')
   const sessions: Record<string, ChatSessionMeta[]> = {}
-  const messages: Record<string, Record<string, any[]>> = {}
+  const messages: Record<string, Record<string, unknown[]>> = {}
   getStorageKeys().forEach(key => {
     if (key.startsWith('chat_sessions_')) {
       const personaId = key.slice('chat_sessions_'.length)
-      sessions[personaId] = (readStorage(key) as ChatSessionMeta[]) || []
+      sessions[personaId] = readStorage<ChatSessionMeta[]>(key) || []
     } else if (key.startsWith('chat_messages_')) {
       const rest = key.slice('chat_messages_'.length)
       const sep = rest.lastIndexOf('_')
@@ -61,7 +73,7 @@ export function buildBackupJson(): string {
       const personaId = rest.slice(0, sep)
       const sessionId = rest.slice(sep + 1)
       if (!messages[personaId]) messages[personaId] = {}
-      messages[personaId][sessionId] = (readStorage(key) as any[]) || []
+      messages[personaId][sessionId] = readStorage<unknown[]>(key) || []
     }
   })
   const backup = {
@@ -81,7 +93,7 @@ export function buildBackupJson(): string {
 }
 
 export function importBackupJson(jsonText: string): { ok: boolean; msg: string } {
-  let parsed: any
+  let parsed: { app?: unknown; data?: BackupData } | null = null
   try {
     parsed = JSON.parse(jsonText)
   } catch (e) {

@@ -155,11 +155,12 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { usePersonaStore, calculateComplementMbti, calculateComplementBigFive, bigFiveMeta, bigFiveDims } from '../../stores/persona'
+import type { SuggestedPersona } from '../../stores/persona'
 
 const personaStore = usePersonaStore()
 
 const currentStep = ref(1)
-const selectedType = ref<any>(null)
+const selectedType = ref<SuggestedPersona | null>(null)
 const personaName = ref('')
 const selectedComplementLevel = ref(50)
 
@@ -230,7 +231,7 @@ function getTypeIcon(name: string): string {
   return icons[name] || '🤖'
 }
 
-function handleSliderChange(e: any) {
+function handleSliderChange(e: { detail: { value: number } }) {
   selectedComplementLevel.value = e.detail.value
 }
 
@@ -246,7 +247,7 @@ function handleNext() {
   if (currentStep.value < 3) {
     currentStep.value++
   } else {
-    const newPersona = personaStore.createPersona(personaName.value, selectedType.value, selectedComplementLevel.value)
+    const newPersona = personaStore.createPersona(personaName.value, selectedType.value ?? undefined, selectedComplementLevel.value)
     
     if (newPersona) {
       uni.showToast({

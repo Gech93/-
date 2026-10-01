@@ -155,7 +155,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { usePersonaStore, findRelevantFacts, bigFiveMeta, bigFiveDims, adjustBigFiveWithBehavior, feedbackSampleStrength, FEEDBACK_MIN_STRENGTH, factMemoryStrength, type BehaviorProfile, type MemoryFact } from '../../stores/persona'
+import { usePersonaStore, findRelevantFacts, bigFiveMeta, bigFiveDims, adjustBigFiveWithBehavior, feedbackSampleStrength, FEEDBACK_MIN_STRENGTH, factMemoryStrength, type BehaviorProfile, type MemoryFact, type MbtiProfile, type BigFiveScores } from '../../stores/persona'
 import { createSession, ensureSessions, getMessagesKey, touchSession } from '../../utils/chatSessions'
 
 interface MemoryUpdatePayload {
@@ -185,6 +185,16 @@ interface ChatResponse {
   memoryUpdates?: MemoryUpdatePayload
 }
 
+interface ChatCompletionData {
+  choices?: Array<{ message?: { content?: string } }>
+}
+
+interface GatewayResponse {
+  code?: number
+  msg?: string
+  data?: ChatCompletionData
+}
+
 const personaStore = usePersonaStore()
 
 const messages = ref<Message[]>([])
@@ -207,7 +217,7 @@ const getStorageKey = () => {
 
 const sessionId = ref('')
 
-onLoad((options: any) => {
+onLoad((options) => {
   const activePersona = personaStore.activePersona
   if (activePersona) {
     personaName.value = activePersona.name
@@ -218,7 +228,7 @@ onLoad((options: any) => {
     const pid = activePersona.id
     const sessions = ensureSessions(pid)
     if (options?.sessionId) {
-      const found = sessions.find((s: any) => s.id === options.sessionId)
+      const found = sessions.find(s => s.id === options.sessionId)
       if (found) sessionId.value = found.id
     }
     if (!sessionId.value) {
@@ -252,8 +262,8 @@ function loadMessages() {
   
   if (savedMessages) {
     try {
-      const parsed = JSON.parse(savedMessages)
-      messages.value = parsed.map((msg: any) => ({
+      const parsed = JSON.parse(savedMessages) as Array<{ id: string; role: 'user' | 'assistant'; content: string; timestamp: string; structured?: StructuredReply }>
+      messages.value = parsed.map((msg) => ({
         ...msg,
         timestamp: new Date(msg.timestamp)
       }))
@@ -289,7 +299,7 @@ function showSettings() {
   showApiKeyModal.value = true
 }
 
-function toggleDeepSeek(e: any) {
+function toggleDeepSeek(e: { detail: { value: boolean[] } }) {
   useDeepSeek.value = e.detail.value.length > 0
 }
 
@@ -420,7 +430,7 @@ const dimPairs: [string, string][] = [
   ['J', 'P'],
 ]
 
-function describeMbtiProfile(profile: any): string {
+function describeMbtiProfile(profile: MbtiProfile | null | undefined): string {
   if (!profile || !profile.scores) return ''
   const s = profile.scores
   const dims = [
@@ -449,14 +459,14 @@ function buildComplementGuidance(userMbti: string, complementMbti: string): stri
   return lines.join('\n') || '- 保持平衡而自然的回应方式'
 }
 
-function describeBigFiveProfile(bigFiveProfile: any): string {
+function describeBigFiveProfile(bigFiveProfile: { scores: BigFiveScores } | null | undefined): string {
   if (!bigFiveProfile || !bigFiveProfile.scores) return ''
   return bigFiveDims
     .map(d => `${bigFiveMeta[d].label} ${bigFiveProfile.scores[d]}`)
     .join('，')
 }
 
-function buildBigFiveGuidance(userScores: any, complementScores: any): string {
+function buildBigFiveGuidance(userScores: BigFiveScores | undefined, complementScores: BigFiveScores | undefined): string {
   if (!userScores || !complementScores) return ''
   const lines: string[] = []
   bigFiveDims.forEach(d => {
@@ -471,7 +481,7 @@ function buildBigFiveGuidance(userScores: any, complementScores: any): string {
   return lines.join('\n') || ''
 }
 
-function describeBehaviorProfile(bp: any): string {
+function describeBehaviorProfile(bp: BehaviorProfile | null | undefined): string {
   if (!bp) return ''
   return [
     `情绪倾向：${bp.emotionTendency}`,
@@ -485,7 +495,6 @@ function buildSystemPrompt(): string {
   const persona = personaStore.activePersona
   const userMbti = personaStore.userMbti || '未知'
   const profileText = describeMbtiProfile(personaStore.mbtiProfile)
-  const bigFiveText = describeBigFiveProfile(personaStore.bigFiveProfile)
   const complementMbti = persona?.complementMbti || '未知'
   const level = persona?.complementLevel ?? 50
   const style = persona?.communicationStyle
@@ -605,7 +614,7 @@ function parseStructuredReply(content: string): StructuredReply {
     return {
       perspective: typeof json.perspective === 'string' ? json.perspective : content,
       suggestions: Array.isArray(json.suggestions)
-        ? json.suggestions.map((s: any) => String(s)).filter(Boolean)
+        ? json.suggestions.map((s: unknown) => String(s)).filter(Boolean)
         : [],
       followUpQuestion: typeof json.followUpQuestion === 'string' ? json.followUpQuestion : '',
       memoryUpdates: parseMemoryUpdates(json.memoryUpdates),
@@ -615,24 +624,29 @@ function parseStructuredReply(content: string): StructuredReply {
   }
 }
 
-function parseMemoryUpdates(raw: any): MemoryUpdatePayload | undefined {
+function parseMemoryUpdates(raw: unknown): MemoryUpdatePayload | undefined {
   if (!raw || typeof raw !== 'object') return undefined
+  const r = raw as { facts?: unknown; summary?: unknown; behavior?: unknown }
   const payload: MemoryUpdatePayload = {}
-  if (Array.isArray(raw.facts)) {
-    payload.facts = raw.facts
-      .map((f: any) => (
-        f && typeof f.content === 'string' && f.content.trim()
-          ? { content: f.content.trim(), category: typeof f.category === 'string' ? f.category : undefined }
-          : null
-      ))
-      .filter((f: any): f is { content: string; category?: string } => !!f)
-      .slice(0, 3)
+  if (Array.isArray(r.facts)) {
+    const facts: Array<{ content: string; category?: string }> = []
+    for (const f of r.facts) {
+      const ff = f as { content?: unknown; category?: unknown }
+      if (ff && typeof ff.content === 'string' && ff.content.trim()) {
+        facts.push({
+          content: ff.content.trim(),
+          category: typeof ff.category === 'string' ? ff.category : undefined,
+        })
+        if (facts.length >= 3) break
+      }
+    }
+    payload.facts = facts
   }
-  if (typeof raw.summary === 'string' && raw.summary.trim()) {
-    payload.summary = raw.summary.trim()
+  if (typeof r.summary === 'string' && r.summary.trim()) {
+    payload.summary = r.summary.trim()
   }
-  if (raw.behavior && typeof raw.behavior === 'object') {
-    const b = raw.behavior
+  if (r.behavior && typeof r.behavior === 'object') {
+    const b = r.behavior as { emotionTendency?: unknown; decisionStyle?: unknown; expressionStyle?: unknown; deepNeed?: unknown }
     const behavior: Partial<BehaviorProfile> = {}
     if (typeof b.emotionTendency === 'string') behavior.emotionTendency = b.emotionTendency
     if (typeof b.decisionStyle === 'string') behavior.decisionStyle = b.decisionStyle
@@ -687,9 +701,9 @@ async function callDeepSeekAPI(userMessage: string): Promise<ChatResponse> {
         data: { model: 'deepseek-chat', messages: requestMessages },
         timeout: 30000,
       })
-      const body = proxyRes.data as any
+      const body = proxyRes.data as GatewayResponse
       if (proxyRes.statusCode === 200 && body && body.code === 0 && body.data) {
-        const content = body.data.choices[0].message.content
+        const content = body.data.choices?.[0]?.message?.content ?? ''
         const structured = parseStructuredReply(content)
         return { text: formatStructuredText(structured), structured, memoryUpdates: structured.memoryUpdates }
       }
@@ -724,8 +738,8 @@ async function callDeepSeekAPI(userMessage: string): Promise<ChatResponse> {
     throw new Error(`API 请求失败: ${response.statusCode}`)
   }
 
-  const data = response.data as any
-  const content = data.choices[0].message.content
+  const data = response.data as ChatCompletionData
+  const content = data.choices?.[0]?.message?.content ?? ''
   const structured = parseStructuredReply(content)
   return { text: formatStructuredText(structured), structured, memoryUpdates: structured.memoryUpdates }
 }
@@ -819,8 +833,8 @@ function generateMockResponse(text: string): ChatResponse {
 
 const factCategorySet: MemoryFact['category'][] = ['preference', 'identity', 'plan', 'emotion', 'work', 'other']
 
-function isFactCategory(v: any): v is MemoryFact['category'] {
-  return factCategorySet.includes(v)
+function isFactCategory(v: unknown): v is MemoryFact['category'] {
+  return factCategorySet.includes(v as MemoryFact['category'])
 }
 
 const factPatterns = ['我喜欢', '我不喜欢', '我是', '我在', '我最近', '我经常', '我打算', '我想要', '我希望', '我的工作', '我的目标', '我担心', '我害怕']
@@ -858,7 +872,7 @@ function scrollToBottom() {
   }, 100)
 }
 
-function updateComplementLevel(e: any) {
+function updateComplementLevel(e: { detail: { value: number } }) {
   const target = e.detail.value
   const persona = personaStore.activePersona
   if (persona) {

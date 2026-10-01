@@ -126,13 +126,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { usePersonaStore, bigFiveMeta, bigFiveDims, feedbackSampleStrength, FEEDBACK_MIN_STRENGTH, type FeedbackSample } from '../../stores/persona'
+import { usePersonaStore, bigFiveMeta, bigFiveDims, feedbackSampleStrength, FEEDBACK_MIN_STRENGTH, type FeedbackSample, type Persona } from '../../stores/persona'
 
 const personaStore = usePersonaStore()
 
-const persona = ref<any>(null)
+const persona = ref<Persona | null>(null)
 
-onLoad((options: any) => {
+onLoad((options) => {
   personaStore.loadFromStorage()
   if (options?.id) {
     const found = personaStore.personas.find(p => p.id === options.id)
@@ -175,7 +175,7 @@ const mbtiDims = computed(() => {
 
 const formalityText = computed(() => {
   const map: Record<string, string> = { casual: '随和', neutral: '中性', formal: '正式' }
-  return map[persona.value?.communicationStyle?.formality] || '中性'
+  return map[persona.value?.communicationStyle?.formality || 'neutral'] || '中性'
 })
 
 const usefulMemories = computed(() =>
@@ -191,7 +191,7 @@ const complementGuides = [
   { range: '80%+', name: '强烈互补', description: '差异显著，观点冲击强，适合突破思维定式与重大决策。' },
 ]
 
-function guideActive(g: any): boolean {
+function guideActive(g: { range: string }): boolean {
   const level = persona.value?.complementLevel ?? 50
   if (g.range === '20~40%') return level >= 20 && level <= 40
   if (g.range === '50~70%') return level >= 50 && level <= 70

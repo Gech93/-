@@ -48,7 +48,7 @@ onMounted(() => {
   personaStore.loadFromStorage()
 })
 
-function selectPersona(persona: any) {
+function selectPersona(persona: { id: string }) {
   personaStore.switchPersona(persona.id)
   uni.navigateTo({
     url: `/pages/persona-profile/index?id=${persona.id}`

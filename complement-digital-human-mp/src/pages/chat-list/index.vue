@@ -102,7 +102,7 @@ onShow(() => {
   refreshSessions()
 })
 
-function selectPersona(persona: any) {
+function selectPersona(persona: { id: string }) {
   personaStore.switchPersona(persona.id)
   showPersonaPicker.value = false
   refreshSessions()

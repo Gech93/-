@@ -52,11 +52,11 @@ const personaStore = usePersonaStore()
 
 const isBigFiveMode = ref(false)
 
-onLoad((options: any) => {
+onLoad((options) => {
   isBigFiveMode.value = options?.mode === 'bigfive'
 })
 
-const questions = computed(() =>
+const questions = computed<Array<{ id: number; dimension: string; question: string; options: string[]; label?: string }>>(() =>
   isBigFiveMode.value ? personaStore.bigFiveQuestionsList : personaStore.questions
 )
 const progressId = computed(() =>
@@ -66,7 +66,7 @@ const currentQuestionIndex = computed(() => {
   const idx = questions.value.findIndex(q => q.id === progressId.value)
   return idx >= 0 ? idx : 0
 })
-const currentQuestion = computed<any>(() => questions.value[currentQuestionIndex.value])
+const currentQuestion = computed(() => questions.value[currentQuestionIndex.value])
 const currentAnswer = computed(() => {
   const question = currentQuestion.value
   if (!question) return null

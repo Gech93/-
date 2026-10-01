@@ -14,17 +14,29 @@ export function getMessagesKey(personaId: string, sessionId: string): string {
   return `chat_messages_${personaId}_${sessionId}`
 }
 
-function readJson(key: string): any {
+interface LegacyMessage {
+  role?: string
+  content?: string
+  timestamp?: string
+}
+
+interface SessionMessage {
+  role?: string
+  content?: string
+  structured?: { perspective?: string }
+}
+
+function readJson<T>(key: string): T | null {
   try {
     const raw = uni.getStorageSync(key)
     if (!raw) return null
-    return typeof raw === 'string' ? JSON.parse(raw) : raw
+    return (typeof raw === 'string' ? JSON.parse(raw) : raw) as T
   } catch (e) {
     return null
   }
 }
 
-function writeJson(key: string, value: any): void {
+function writeJson(key: string, value: unknown): void {
   try {
     uni.setStorageSync(key, JSON.stringify(value))
   } catch (e) {
@@ -37,7 +49,7 @@ function writeJson(key: string, value: any): void {
 }
 
 export function loadSessions(personaId: string): ChatSessionMeta[] {
-  const list = readJson(getSessionsKey(personaId))
+  const list = readJson<ChatSessionMeta[]>(getSessionsKey(personaId))
   return Array.isArray(list) ? list : []
 }
 
@@ -50,16 +62,18 @@ export function ensureSessions(personaId: string): ChatSessionMeta[] {
   if (sessions.length) return sessions
 
   const legacyKey = `chat_messages_${personaId}`
-  const legacy = readJson(legacyKey)
+  const legacy = readJson<LegacyMessage[]>(legacyKey)
   if (Array.isArray(legacy) && legacy.length) {
     const id = 'legacy'
-    const firstUser = legacy.find((m: any) => m.role === 'user')
+    const firstUser = legacy.find((m: LegacyMessage) => m.role === 'user')
+    const firstMessage = legacy[0]
+    const lastMessage = legacy[legacy.length - 1]
     const session: ChatSessionMeta = {
       id,
       title: firstUser && firstUser.content ? firstUser.content.slice(0, 16) : '对话',
-      createdAt: legacy[0] && legacy[0].timestamp ? legacy[0].timestamp : new Date().toISOString(),
-      updatedAt: legacy.length > 0 && legacy[legacy.length - 1] && legacy[legacy.length - 1].timestamp ? legacy[legacy.length - 1].timestamp : new Date().toISOString(),
-      preview: legacy.length > 0 && legacy[legacy.length - 1] && legacy[legacy.length - 1].content ? legacy[legacy.length - 1].content.slice(0, 30) : '',
+      createdAt: firstMessage && firstMessage.timestamp ? firstMessage.timestamp : new Date().toISOString(),
+      updatedAt: lastMessage && lastMessage.timestamp ? lastMessage.timestamp : new Date().toISOString(),
+      preview: lastMessage && lastMessage.content ? lastMessage.content.slice(0, 30) : '',
     }
     saveSessions(personaId, [session])
     try {
@@ -92,11 +106,11 @@ export function createSession(personaId: string): ChatSessionMeta {
   return session
 }
 
-export function touchSession(personaId: string, sessionId: string, messages: any[]): void {
+export function touchSession(personaId: string, sessionId: string, messages: SessionMessage[]): void {
   const sessions = loadSessions(personaId)
   const meta = sessions.find(s => s.id === sessionId)
   if (!meta) return
-  const firstUser = messages.find((m: any) => m.role === 'user')
+  const firstUser = messages.find((m: SessionMessage) => m.role === 'user')
   const last = messages[messages.length - 1]
   if (firstUser && firstUser.content) meta.title = firstUser.content.slice(0, 16)
   if (last && last.structured && last.structured.perspective) {

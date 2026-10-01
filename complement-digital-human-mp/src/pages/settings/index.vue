@@ -105,8 +105,9 @@ const appVersion = `v${manifest.versionName || '1.0.0'}`
 const useCloudProxy = ref(uni.getStorageSync('use_cloud_proxy') === true)
 const gatewayUrl = ref(uni.getStorageSync('cloud_gateway_url') || '')
 
-function toggleCloudProxy(e: any) {
-  useCloudProxy.value = e.detail.value
+function toggleCloudProxy(e: Event) {
+  const detail = (e as unknown as { detail?: { value?: boolean } }).detail
+  useCloudProxy.value = detail?.value ?? !useCloudProxy.value
   uni.setStorageSync('use_cloud_proxy', useCloudProxy.value)
   uni.showToast({
     title: useCloudProxy.value ? '已启用云端网关' : '已关闭云端网关',
@@ -155,8 +156,8 @@ function importBackup() {
   const input = document.createElement('input')
   input.type = 'file'
   input.accept = 'application/json,.json'
-  input.onchange = (e: any) => {
-    const file = e.target && e.target.files && e.target.files[0]
+  input.onchange = (e: Event) => {
+    const file = (e.target as HTMLInputElement).files?.[0]
     if (!file) return
     const reader = new FileReader()
     reader.onload = () => {
@@ -177,7 +178,7 @@ function importBackup() {
       uni.getFileSystemManager().readFile({
         filePath: file.path,
         encoding: 'utf-8',
-        success: (r: any) => {
+        success: (r: { data: string | ArrayBuffer }) => {
           doImport(String(r.data || ''))
         },
         fail: () => {
