@@ -408,6 +408,7 @@ const defaultCommunicationStyle: CommunicationStyle = {
 export interface FeedbackSample {
   text: string
   count: number
+  lastAt: string
 }
 
 export interface PersonaFeedback {
@@ -415,6 +416,23 @@ export interface PersonaFeedback {
   miss: number
   usefulSamples: FeedbackSample[]
   missSamples: FeedbackSample[]
+}
+
+// 记忆衰减：反馈记忆以"半衰期"随时间减弱，旧认可权重降低，直至被遗忘
+export const FEEDBACK_HALF_LIFE_DAYS = 7
+export const FEEDBACK_MIN_STRENGTH = 0.5
+
+export function feedbackSampleStrength(sample: FeedbackSample): number {
+  const days = Math.max(0, (Date.now() - new Date(sample.lastAt).getTime()) / (24 * 60 * 60 * 1000))
+  return sample.count * Math.pow(0.5, days / FEEDBACK_HALF_LIFE_DAYS)
+}
+
+function normalizeFeedbackSample(s: any): FeedbackSample {
+  return {
+    text: s.text,
+    count: s.count || 1,
+    lastAt: s.lastAt || new Date().toISOString(),
+  }
 }
 
 interface Persona {
@@ -570,8 +588,8 @@ function createStore() {
       feedback: {
         useful: p.feedback?.useful || 0,
         miss: p.feedback?.miss || 0,
-        usefulSamples: p.feedback?.usefulSamples || [],
-        missSamples: p.feedback?.missSamples || [],
+        usefulSamples: (p.feedback?.usefulSamples || []).map(normalizeFeedbackSample),
+        missSamples: (p.feedback?.missSamples || []).map(normalizeFeedbackSample),
       },
     }
   }
@@ -760,8 +778,20 @@ function createStore() {
   function rememberSample(samples: FeedbackSample[], text: string) {
     const trimmed = text.length > 60 ? text.slice(0, 60) + '…' : text
     const existing = samples.find(s => s.text === trimmed)
-    if (existing) existing.count += 1
-    else samples.push({ text: trimmed, count: 1 })
+    if (existing) {
+      existing.count += 1
+      existing.lastAt = new Date().toISOString()
+    } else {
+      samples.push({ text: trimmed, count: 1, lastAt: new Date().toISOString() })
+    }
+  }
+
+  function forgetDecayedSamples(samples: FeedbackSample[]) {
+    for (let i = samples.length - 1; i >= 0; i--) {
+      if (feedbackSampleStrength(samples[i]) < FEEDBACK_MIN_STRENGTH) {
+        samples.splice(i, 1)
+      }
+    }
   }
 
   function recordFeedback(useful: boolean, sampleText = '') {
@@ -770,9 +800,11 @@ function createStore() {
     if (useful) {
       persona.feedback.useful += 1
       if (sampleText) rememberSample(persona.feedback.usefulSamples, sampleText)
+      forgetDecayedSamples(persona.feedback.usefulSamples)
     } else {
       persona.feedback.miss += 1
       if (sampleText) rememberSample(persona.feedback.missSamples, sampleText)
+      forgetDecayedSamples(persona.feedback.missSamples)
     }
     saveToStorage()
   }

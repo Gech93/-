@@ -103,16 +103,16 @@
           <text class="stat-label">没感觉</text>
         </view>
       </view>
-      <view class="memory-list" v-if="persona.feedback.usefulSamples.length">
-        <text class="memory-title">已记住的视角（会在后续对话中延续）</text>
-        <view class="memory-item" v-for="(s, i) in persona.feedback.usefulSamples.slice(0, 3)" :key="i">
+      <view class="memory-list" v-if="usefulMemories.length">
+        <text class="memory-title">记住的视角（记忆会随时间衰减，常回顾才能长存）</text>
+        <view class="memory-item" v-for="(s, i) in usefulMemories" :key="i">
           <text class="memory-icon">👍</text>
           <text class="memory-text">{{ s.text }}</text>
-          <text class="memory-count">×{{ s.count }}</text>
+          <text class="memory-count">强度 {{ Math.round(feedbackSampleStrength(s)) }}</text>
         </view>
       </view>
       <view class="memory-empty" v-else>
-        <text>还没有点赞过的视角。去对话里给「有帮助」的回复点个👍，互补人格会记住并延续这种风格。</text>
+        <text>还没有有效的认可记忆。去对话里给「有帮助」的回复点个👍，互补人格会记住并延续这种风格（时间久了会遗忘，常回顾才能长存）。</text>
       </view>
     </view>
 
@@ -126,7 +126,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { usePersonaStore, bigFiveMeta, bigFiveDims } from '../../stores/persona'
+import { usePersonaStore, bigFiveMeta, bigFiveDims, feedbackSampleStrength, FEEDBACK_MIN_STRENGTH, type FeedbackSample } from '../../stores/persona'
 
 const personaStore = usePersonaStore()
 
@@ -177,6 +177,13 @@ const formalityText = computed(() => {
   const map: Record<string, string> = { casual: '随和', neutral: '中性', formal: '正式' }
   return map[persona.value?.communicationStyle?.formality] || '中性'
 })
+
+const usefulMemories = computed(() =>
+  ((persona.value?.feedback?.usefulSamples || []) as FeedbackSample[])
+    .filter(s => feedbackSampleStrength(s) >= FEEDBACK_MIN_STRENGTH)
+    .sort((a, b) => feedbackSampleStrength(b) - feedbackSampleStrength(a))
+    .slice(0, 3)
+)
 
 const complementGuides = [
   { range: '20~40%', name: '温和互补', description: '差异轻微，像另一个你，适合日常倾诉与被理解。' },

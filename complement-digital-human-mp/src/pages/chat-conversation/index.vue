@@ -154,7 +154,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { usePersonaStore, findRelevantFacts, bigFiveMeta, bigFiveDims, adjustBigFiveWithBehavior } from '../../stores/persona'
+import { usePersonaStore, findRelevantFacts, bigFiveMeta, bigFiveDims, adjustBigFiveWithBehavior, feedbackSampleStrength, FEEDBACK_MIN_STRENGTH } from '../../stores/persona'
 
 interface StructuredReply {
   perspective: string
@@ -479,17 +479,23 @@ function buildSystemPrompt(): string {
   }
 
   const feedback = persona?.feedback
-  const usefulSamples = feedback?.usefulSamples || []
-  const missSamples = feedback?.missSamples || []
+  const usefulSamples = (feedback?.usefulSamples || [])
+    .filter(s => feedbackSampleStrength(s) >= FEEDBACK_MIN_STRENGTH)
+    .sort((a, b) => feedbackSampleStrength(b) - feedbackSampleStrength(a))
+    .slice(0, 3)
+  const missSamples = (feedback?.missSamples || [])
+    .filter(s => feedbackSampleStrength(s) >= FEEDBACK_MIN_STRENGTH)
+    .sort((a, b) => feedbackSampleStrength(b) - feedbackSampleStrength(a))
+    .slice(0, 3)
   if (usefulSamples.length) {
     parts.push('')
-    parts.push('【用户的认可记忆】用户曾对以下视角标记「有帮助」，请继续保持这类输出风格与视角深度：')
-    usefulSamples.slice(0, 3).forEach(s => parts.push(`- ${s.text}（被认可 ${s.count} 次）`))
+    parts.push('【用户的认可记忆】用户曾对以下视角标记「有帮助」，请继续保持这类输出风格与视角深度（越靠前越应优先延续）：')
+    usefulSamples.forEach(s => parts.push(`- ${s.text}（记忆强度 ${Math.round(feedbackSampleStrength(s))}）`))
   }
   if (missSamples.length) {
     parts.push('')
     parts.push('【用户的调整记忆】用户曾对以下表述标记「没感觉」，请避免类似泛泛而谈：')
-    missSamples.slice(0, 3).forEach(s => parts.push(`- ${s.text}（${s.count} 次）`))
+    missSamples.forEach(s => parts.push(`- ${s.text}（记忆强度 ${Math.round(feedbackSampleStrength(s))}）`))
   }
 
   if (memory && (memory.summary || (memory.userFacts && memory.userFacts.length))) {
