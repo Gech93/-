@@ -2,7 +2,7 @@
   <view class="test-container">
     <view class="nav-bar">
       <view class="back-btn" @click="goBack">← 返回</view>
-      <view class="progress-info">第 {{ currentQuestionIndex + 1 }} / {{ questions.length }} 题</view>
+      <view class="progress-info">{{ isBigFiveMode ? '大五测评' : 'MBTI测评' }} · 第 {{ currentQuestionIndex + 1 }} / {{ questions.length }} 题</view>
     </view>
 
     <view class="progress-bar">
@@ -11,6 +11,7 @@
 
     <view class="question-card">
       <text class="question-icon">💡</text>
+      <text class="dimension-tag" v-if="isBigFiveMode">{{ currentQuestion.label }}</text>
       <text class="question-text">{{ currentQuestion.question }}</text>
     </view>
 
@@ -42,29 +43,49 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
 import { usePersonaStore } from '../../stores/persona'
+import type { BigFiveScores } from '../../stores/persona'
 
 const personaStore = usePersonaStore()
 
-const questions = computed(() => personaStore.questions)
+const isBigFiveMode = ref(false)
+
+onLoad((options: any) => {
+  isBigFiveMode.value = options?.mode === 'bigfive'
+})
+
+const questions = computed(() =>
+  isBigFiveMode.value ? personaStore.bigFiveQuestionsList : personaStore.questions
+)
+const progressId = computed(() =>
+  isBigFiveMode.value ? personaStore.bigFiveTestProgress : personaStore.mbtiTestProgress
+)
 const currentQuestionIndex = computed(() => {
-  const currentId = personaStore.mbtiTestProgress
-  const idx = questions.value.findIndex(q => q.id === currentId)
+  const idx = questions.value.findIndex(q => q.id === progressId.value)
   return idx >= 0 ? idx : 0
 })
-const currentQuestion = computed(() => questions.value[currentQuestionIndex.value])
-const currentAnswer = computed(() => personaStore.answers[currentQuestion.value.id])
+const currentQuestion = computed<any>(() => questions.value[currentQuestionIndex.value])
+const currentAnswer = computed(() => {
+  const question = currentQuestion.value
+  if (!question) return null
+  return isBigFiveMode.value ? personaStore.bigFiveAnswers[question.id] : personaStore.answers[question.id]
+})
 const progressWidth = computed(() => {
   return `${((currentQuestionIndex.value + 1) / questions.value.length) * 100}%`
 })
 const isLastQuestion = computed(() => currentQuestionIndex.value === questions.value.length - 1)
 
 function selectOption(index: number) {
-  personaStore.setAnswer(currentQuestion.value.id, index)
+  if (isBigFiveMode.value) {
+    personaStore.setBigFiveAnswer(currentQuestion.value.id, index)
+  } else {
+    personaStore.setAnswer(currentQuestion.value.id, index)
+  }
 }
 
-function describeProfile(): string {
+function describeMbtiProfile(): string {
   const profile = personaStore.mbtiProfile
   if (!profile || !profile.scores) return ''
   const s = profile.scores
@@ -77,34 +98,78 @@ function describeProfile(): string {
   return dims.map(d => `${d.value >= 50 ? d.pos : d.neg}(${d.value}%)`).join('，')
 }
 
+function describeBigFiveProfile(): string {
+  const profile = personaStore.bigFiveProfile
+  if (!profile || !profile.scores) return ''
+  const keyMap: { label: string; key: keyof BigFiveScores }[] = [
+    { label: '开放性', key: 'O' },
+    { label: '尽责性', key: 'C' },
+    { label: '外向性', key: 'E' },
+    { label: '宜人性', key: 'A' },
+    { label: '神经质', key: 'N' },
+  ]
+  return keyMap.map(d => `${d.label} ${profile.descriptions[d.key]}`).join('，')
+}
+
 function handleNext() {
   if (isLastQuestion.value) {
-    personaStore.completeMbtiTest()
-    uni.showModal({
-      title: '测试完成',
-      content: `你的MBTI类型是：${personaStore.userMbti}\n维度强度：${describeProfile()}\n测试置信度：${personaStore.mbtiProfile?.confidence || 0}%\n\n现在创建你的第一个互补数字人吗？`,
-      confirmText: '创建',
-      cancelText: '稍后',
-      success: (res) => {
-        if (res.confirm) {
-          uni.navigateTo({
-            url: '/pages/persona-create/index'
-          })
-        } else {
-          uni.navigateTo({
-            url: '/pages/persona-list/index'
-          })
+    if (isBigFiveMode.value) {
+      personaStore.completeBigFiveTest()
+      uni.showModal({
+        title: '大五测评完成',
+        content: `你的大五人格画像：\n${describeBigFiveProfile()}\n画像置信度：${personaStore.bigFiveProfile?.confidence || 0}%\n\n现在创建你的第一个互补数字人吗？`,
+        confirmText: '创建',
+        cancelText: '稍后',
+        success: (res) => {
+          if (res.confirm) {
+            uni.navigateTo({
+              url: '/pages/persona-create/index'
+            })
+          } else {
+            uni.navigateTo({
+              url: '/pages/persona-list/index'
+            })
+          }
         }
-      }
-    })
+      })
+    } else {
+      personaStore.completeMbtiTest()
+      uni.showModal({
+        title: '测试完成',
+        content: `你的MBTI类型是：${personaStore.userMbti}\n维度强度：${describeMbtiProfile()}\n测试置信度：${personaStore.mbtiProfile?.confidence || 0}%\n\n继续完成大五人格测评，可以更精准地构建互补人格。`,
+        confirmText: '继续大五测评',
+        cancelText: '稍后',
+        success: (res) => {
+          if (res.confirm) {
+            uni.navigateTo({
+              url: '/pages/mbti-test/index?mode=bigfive'
+            })
+          } else {
+            uni.navigateTo({
+              url: '/pages/persona-list/index'
+            })
+          }
+        }
+      })
+    }
   } else {
-    personaStore.mbtiTestProgress = questions.value[currentQuestionIndex.value + 1].id
+    const nextId = questions.value[currentQuestionIndex.value + 1].id
+    if (isBigFiveMode.value) {
+      personaStore.bigFiveTestProgress = nextId
+    } else {
+      personaStore.mbtiTestProgress = nextId
+    }
   }
 }
 
 function goBack() {
   if (currentQuestionIndex.value > 0) {
-    personaStore.mbtiTestProgress = questions.value[currentQuestionIndex.value - 1].id
+    const prevId = questions.value[currentQuestionIndex.value - 1].id
+    if (isBigFiveMode.value) {
+      personaStore.bigFiveTestProgress = prevId
+    } else {
+      personaStore.mbtiTestProgress = prevId
+    }
   } else {
     uni.navigateBack()
   }
@@ -155,6 +220,9 @@ function goBack() {
   border-radius: 32rpx;
   padding: 48rpx;
   margin-bottom: 32rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .question-icon {
@@ -162,6 +230,18 @@ function goBack() {
   font-size: 64rpx;
   text-align: center;
   margin-bottom: 24rpx;
+}
+
+.dimension-tag {
+  display: inline-block;
+  align-self: center;
+  text-align: center;
+  padding: 8rpx 32rpx;
+  background: rgba(102, 126, 234, 0.12);
+  color: #667eea;
+  border-radius: 32rpx;
+  font-size: 26rpx;
+  margin-bottom: 16rpx;
 }
 
 .question-text {

@@ -75,6 +75,14 @@
         <text class="preview-icon">{{ complementMbti }}</text>
         <text class="preview-name">{{ personaName }}</text>
         <text class="preview-mbti">互补类型：{{ complementMbti }}（互补度 {{ selectedComplementLevel }}%）</text>
+        <view class="preview-bigfive" v-if="complementBigFive">
+          <text class="preview-bigfive-title">大五互补人格</text>
+          <view class="preview-bigfive-dims">
+            <text v-for="d in bigFiveDimList" :key="d" class="preview-bigfive-dim">
+              {{ bigFiveMeta[d].label }} {{ complementBigFive[d] }}
+            </text>
+          </view>
+        </view>
       </view>
     </view>
 
@@ -104,6 +112,10 @@
         <view class="info-row" v-if="profile">
           <text class="info-label">互补维度</text>
           <text class="info-value dims-value">{{ complementDimText }}</text>
+        </view>
+        <view class="info-row" v-if="complementBigFive">
+          <text class="info-label">大五互补</text>
+          <text class="info-value dims-value">{{ bigFiveDimText }}</text>
         </view>
       </view>
 
@@ -142,7 +154,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { usePersonaStore, calculateComplementMbti } from '../../stores/persona'
+import { usePersonaStore, calculateComplementMbti, calculateComplementBigFive, bigFiveMeta, bigFiveDims } from '../../stores/persona'
 
 const personaStore = usePersonaStore()
 
@@ -152,6 +164,23 @@ const personaName = ref('')
 const selectedComplementLevel = ref(50)
 
 const profile = computed(() => personaStore.mbtiProfile || null)
+
+const bigFiveDimList = bigFiveDims
+
+const complementBigFive = computed(() => {
+  const scores = personaStore.bigFiveProfile?.scores
+  if (!scores) return null
+  return calculateComplementBigFive(scores, selectedComplementLevel.value)
+})
+
+const bigFiveDimText = computed(() => {
+  const target = complementBigFive.value
+  const source = personaStore.bigFiveProfile?.scores
+  if (!target || !source) return ''
+  return bigFiveDims
+    .map(d => `${bigFiveMeta[d].label} ${target[d]}`)
+    .join('、')
+})
 
 const complementMbti = computed(() => {
   const userType = personaStore.userMbti
@@ -476,6 +505,35 @@ function handleNext() {
   display: block;
   font-size: 32rpx;
   color: rgba(255, 255, 255, 0.8);
+}
+
+.preview-bigfive {
+  margin-top: 32rpx;
+  padding: 32rpx;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 24rpx;
+}
+
+.preview-bigfive-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #ffffff;
+  margin-bottom: 16rpx;
+}
+
+.preview-bigfive-dims {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.preview-bigfive-dim {
+  padding: 8rpx 20rpx;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 20rpx;
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .success-icon {

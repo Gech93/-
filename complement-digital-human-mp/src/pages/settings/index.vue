@@ -34,6 +34,11 @@
         <text class="setting-label">重新测试MBTI</text>
         <text class="setting-arrow">→</text>
       </view>
+
+      <view class="setting-item" @click="goToBigFive">
+        <text class="setting-label">大五人格测评</text>
+        <text class="setting-value">{{ personaStore.isBigFiveTestCompleted ? '已完成' : '未完成' }}</text>
+      </view>
       
       <view class="setting-item" @click="goToPersona">
         <text class="setting-label">管理人格</text>
@@ -56,7 +61,7 @@ const personaStore = usePersonaStore()
 function clearData() {
   uni.showModal({
     title: '确认清除',
-    content: '确定要清除所有数据吗？包括MBTI测试结果、人格设置和对话记录。',
+    content: '确定要清除所有数据吗？包括MBTI与大五测评结果、人格设置和对话记录。',
     success: (res) => {
       if (res.confirm) {
         uni.clearStorageSync()
@@ -75,6 +80,12 @@ function clearData() {
 function goToMbti() {
   uni.navigateTo({
     url: '/pages/mbti-test/index'
+  })
+}
+
+function goToBigFive() {
+  uni.navigateTo({
+    url: '/pages/mbti-test/index?mode=bigfive'
   })
 }
 

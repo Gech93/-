@@ -22,6 +22,202 @@ export const mbtiQuestions = [
   { id: 16, dimension: 'JP', question: '做选择时，你倾向于：', options: ['快速决定，不喜欢拖延', '保持开放，收集更多信息'] },
 ]
 
+export interface BigFiveScores {
+  O: number
+  C: number
+  E: number
+  A: number
+  N: number
+}
+
+export interface BigFiveProfile {
+  scores: BigFiveScores
+  confidence: number
+  descriptions: Record<keyof BigFiveScores, string>
+}
+
+export interface BigFiveQuestion {
+  id: number
+  dimension: keyof BigFiveScores
+  label: string
+  reversed: boolean
+  question: string
+  options: string[]
+}
+
+export const bigFiveQuestions: BigFiveQuestion[] = [
+  { id: 1, dimension: 'O', label: '开放性', reversed: false, question: '我会主动尝试新事物、接触新想法。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'] },
+  { id: 2, dimension: 'O', label: '开放性', reversed: true, question: '我更习惯熟悉的做法，不太喜欢改变。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'] },
+  { id: 3, dimension: 'C', label: '尽责性', reversed: false, question: '我会提前规划，并认真把任务完成。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'] },
+  { id: 4, dimension: 'C', label: '尽责性', reversed: true, question: '我经常拖延，把事情拖到最后才做。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'] },
+  { id: 5, dimension: 'E', label: '外向性', reversed: false, question: '在社交场合中我感到精力充沛。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'] },
+  { id: 6, dimension: 'E', label: '外向性', reversed: true, question: '我更享受独处，不太喜欢热闹的场合。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'] },
+  { id: 7, dimension: 'A', label: '宜人性', reversed: false, question: '我乐于助人，容易信任他人。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'] },
+  { id: 8, dimension: 'A', label: '宜人性', reversed: true, question: '与人合作时，我倾向于坚持自己的看法。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'] },
+  { id: 9, dimension: 'N', label: '神经质', reversed: false, question: '我容易感到紧张或焦虑。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'] },
+  { id: 10, dimension: 'N', label: '神经质', reversed: true, question: '面对压力时，我通常能保持平静。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'] },
+]
+
+export const bigFiveMeta: Record<keyof BigFiveScores, { label: string; low: string; high: string }> = {
+  O: { label: '开放性', low: '务实传统', high: '开放创新' },
+  C: { label: '尽责性', low: '灵活随性', high: '严谨自律' },
+  E: { label: '外向性', low: '内敛沉静', high: '外向活跃' },
+  A: { label: '宜人性', low: '直接坚定', high: '温和合作' },
+  N: { label: '神经质', low: '情绪稳定', high: '敏感细腻' },
+}
+
+export const bigFiveDims = ['O', 'C', 'E', 'A', 'N'] as (keyof BigFiveScores)[]
+
+export const bigFiveOptionScores = [0, 25, 50, 75, 100]
+
+export function calculateBigFiveProfile(answers: Record<number, number>): BigFiveProfile {
+  const accum: Record<keyof BigFiveScores, { sum: number; count: number }> = {
+    O: { sum: 0, count: 0 },
+    C: { sum: 0, count: 0 },
+    E: { sum: 0, count: 0 },
+    A: { sum: 0, count: 0 },
+    N: { sum: 0, count: 0 },
+  }
+
+  Object.entries(answers).forEach(([qid, optionIndex]) => {
+    const q = bigFiveQuestions.find(item => item.id === parseInt(qid))
+    if (!q) return
+    let score = bigFiveOptionScores[optionIndex] ?? 50
+    if (q.reversed) score = 100 - score
+    accum[q.dimension].sum += score
+    accum[q.dimension].count += 1
+  })
+
+  const scores = {} as BigFiveScores
+  bigFiveDims.forEach(d => {
+    scores[d] = accum[d].count > 0 ? Math.round(accum[d].sum / accum[d].count) : 50
+  })
+
+  const confidence = Math.round(bigFiveDims.reduce((a, d) => a + Math.abs(scores[d] - 50) * 2, 0) / 5)
+
+  const descriptions = {} as Record<keyof BigFiveScores, string>
+  bigFiveDims.forEach(d => {
+    const v = scores[d]
+    descriptions[d] = v >= 60 ? `${bigFiveMeta[d].high}(${v})` : v <= 40 ? `${bigFiveMeta[d].low}(${v})` : `中性(${v})`
+  })
+
+  return { scores, confidence, descriptions }
+}
+
+export function calculateComplementBigFive(scores: BigFiveScores, level = 50): BigFiveScores {
+  const ratio = Math.min(100, Math.max(0, level)) / 100
+  const result = {} as BigFiveScores
+  bigFiveDims.forEach(d => {
+    const user = scores[d]
+    result[d] = Math.round(Math.min(100, Math.max(0, user + (100 - 2 * user) * ratio)))
+  })
+  return result
+}
+
+export interface BehaviorProfile {
+  emotionTendency: string
+  decisionStyle: string
+  expressionStyle: string
+  deepNeed: string
+  updateCount: number
+  lastUpdatedAt: string
+}
+
+export interface MemoryFact {
+  id: string
+  content: string
+  keywords: string[]
+  importance: number
+  category: 'preference' | 'identity' | 'plan' | 'emotion' | 'work' | 'other'
+  createdAt: string
+}
+
+export function bigramSet(text: string): Set<string> {
+  const chars = text.replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '').toLowerCase()
+  const result = new Set<string>()
+  for (let i = 0; i < chars.length - 1; i++) {
+    result.add(chars.slice(i, i + 2))
+  }
+  return result
+}
+
+export function bigramJaccard(a: string, b: string): number {
+  const sa = bigramSet(a)
+  const sb = bigramSet(b)
+  if (sa.size === 0 || sb.size === 0) return 0
+  let inter = 0
+  sa.forEach(c => {
+    if (sb.has(c)) inter++
+  })
+  return inter / (sa.size + sb.size - inter)
+}
+
+export function findRelevantFacts(facts: MemoryFact[], query: string, topK = 3): MemoryFact[] {
+  return facts
+    .map(f => ({
+      fact: f,
+      score: bigramJaccard(f.content, query) + bigramJaccard(f.keywords.join(' '), query) + f.importance * 0.01,
+    }))
+    .filter(item => item.score > 0.1)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topK)
+    .map(item => item.fact)
+}
+
+export function inferBehaviorFromMessage(message: string): Partial<BehaviorProfile> {
+  const result: Partial<BehaviorProfile> = {}
+
+  if (/焦虑|紧张|害怕|担心|不安|压力|崩溃|失眠/.test(message)) {
+    result.emotionTendency = '焦虑敏感'
+  } else if (/开心|高兴|兴奋|激动|期待|幸福|满足|爽/.test(message)) {
+    result.emotionTendency = '积极乐观'
+  } else if (/难过|伤心|沮丧|失落|孤独|委屈|累|疲惫/.test(message)) {
+    result.emotionTendency = '低落需要支持'
+  } else if (/生气|愤怒|不满|烦|讨厌|抱怨/.test(message)) {
+    result.emotionTendency = '情绪易波动'
+  } else {
+    result.emotionTendency = '平稳理性'
+  }
+
+  if (/怎么选|纠结|犹豫|不知道选|选哪个|拿不定/.test(message)) {
+    result.decisionStyle = '犹豫型，需要引导做决定'
+  } else if (/我要|我决定|我打算|必须|一定要/.test(message)) {
+    result.decisionStyle = '果断型，倾向自主决策'
+  } else if (/大家|别人|他们|家人|朋友|同事.*说|听.*意见/.test(message)) {
+    result.decisionStyle = '参考型，重视他人意见'
+  } else if (/分析|比较|数据|成本|利弊|方案/.test(message)) {
+    result.decisionStyle = '分析型，偏好理性权衡'
+  } else {
+    result.decisionStyle = '综合型，需要结构化帮助'
+  }
+
+  if (/怎么办|教我|帮帮|怎么做|应该/.test(message)) {
+    result.expressionStyle = '求建议，希望得到直接指导'
+  } else if (/其实我|我不知道|说不清|有点乱/.test(message)) {
+    result.expressionStyle = '倾诉型，需要被倾听'
+  } else if (/我觉得|我认为|我的想法/.test(message)) {
+    result.expressionStyle = '表达型，希望观点被确认'
+  } else {
+    result.expressionStyle = '陈述型，需要被理解'
+  }
+
+  if (/工作|晋升|绩效|领导|同事|职业|加班/.test(message)) {
+    result.deepNeed = '职业成长与价值认同'
+  } else if (/喜欢|爱好|兴趣|学|读书|电影|音乐/.test(message)) {
+    result.deepNeed = '自我实现与兴趣探索'
+  } else if (/对象|伴侣|恋爱|分手|相亲|婚姻/.test(message)) {
+    result.deepNeed = '亲密关系中的安全感'
+  } else if (/钱|工资|收入|存款|买房|负债/.test(message)) {
+    result.deepNeed = '经济安全与掌控感'
+  } else if (/健康|体检|生病|减肥|运动|失眠/.test(message)) {
+    result.deepNeed = '身心健康与自律'
+  } else {
+    result.deepNeed = '被理解与获得方向感'
+  }
+
+  return result
+}
+
 export interface CommunicationStyle {
   formality: 'casual' | 'neutral' | 'formal'
   tone: string[]
@@ -31,6 +227,7 @@ export interface CommunicationStyle {
 export interface PersonaMemory {
   summary: string
   userFacts: string[]
+  facts: MemoryFact[]
 }
 
 export interface MbtiScores {
@@ -83,6 +280,9 @@ interface Persona {
   memory: PersonaMemory
   confidence: number
   mbtiScores: MbtiScores
+  bigFiveScores: BigFiveScores
+  complementBigFive: BigFiveScores
+  behaviorProfile: BehaviorProfile | null
 }
 
 const keyOf: Record<string, keyof MbtiScores> = { E: 'E', I: 'E', S: 'S', N: 'S', T: 'T', F: 'T', J: 'J', P: 'J' }
@@ -116,11 +316,15 @@ function computeConfidence(scores: MbtiScores): number {
 function createStore() {
   const userMbti = ref<string | null>(null)
   const mbtiProfile = ref<MbtiProfile | null>(null)
+  const bigFiveProfile = ref<BigFiveProfile | null>(null)
   const personas = ref<Persona[]>([])
   const activePersonaId = ref<string | null>(null)
   const mbtiTestProgress = ref(0)
   const answers = ref<Record<number, number>>({})
   const isTestCompleted = ref(false)
+  const bigFiveTestProgress = ref(0)
+  const bigFiveAnswers = ref<Record<number, number>>({})
+  const isBigFiveTestCompleted = ref(false)
 
   const activePersona = computed(() => {
     return personas.value.find(p => p.id === activePersonaId.value) || personas.value[0] || null
@@ -133,6 +337,8 @@ function createStore() {
   const personaCount = computed(() => personas.value.length)
 
   const questions = computed(() => mbtiQuestions)
+
+  const bigFiveQuestionsList = computed(() => bigFiveQuestions)
 
   const suggestedNameList = computed(() => suggestedTypes)
 
@@ -182,6 +388,18 @@ function createStore() {
     saveToStorage()
   }
 
+  function setBigFiveAnswer(questionId: number, optionIndex: number) {
+    bigFiveAnswers.value[questionId] = optionIndex
+    bigFiveTestProgress.value = questionId
+  }
+
+  function completeBigFiveTest() {
+    const profile = calculateBigFiveProfile(bigFiveAnswers.value)
+    bigFiveProfile.value = profile
+    isBigFiveTestCompleted.value = true
+    saveToStorage()
+  }
+
   function normalizePersona(p: any): Persona {
     return {
       id: p.id,
@@ -196,9 +414,12 @@ function createStore() {
       isActive: p.isActive,
       tags: p.tags || [],
       communicationStyle: p.communicationStyle || defaultCommunicationStyle,
-      memory: p.memory || { summary: '', userFacts: [] },
+      memory: p.memory ? { summary: p.memory.summary || '', userFacts: p.memory.userFacts || [], facts: p.memory.facts || [] } : { summary: '', userFacts: [], facts: [] },
       confidence: p.confidence ?? 0,
       mbtiScores: p.mbtiScores || { E: 50, S: 50, T: 50, J: 50 },
+      bigFiveScores: p.bigFiveScores || { O: 50, C: 50, E: 50, A: 50, N: 50 },
+      complementBigFive: p.complementBigFive || { O: 50, C: 50, E: 50, A: 50, N: 50 },
+      behaviorProfile: p.behaviorProfile || null,
     }
   }
 
@@ -229,6 +450,8 @@ function createStore() {
       confidence: 0,
     }
 
+    const bfScores: BigFiveScores = bigFiveProfile.value?.scores || { O: 50, C: 50, E: 50, A: 50, N: 50 }
+
     const newPersona: Persona = {
       id: Date.now().toString(),
       name,
@@ -242,9 +465,12 @@ function createStore() {
       isActive: personas.value.length === 0,
       tags: suggested?.tags || [],
       communicationStyle: suggested?.communicationStyle || defaultCommunicationStyle,
-      memory: { summary: '', userFacts: [] },
+      memory: { summary: '', userFacts: [], facts: [] },
       confidence: profile.confidence,
       mbtiScores: profile.scores,
+      bigFiveScores: bfScores,
+      complementBigFive: calculateComplementBigFive(bfScores, complementLevel),
+      behaviorProfile: null,
     }
 
     personas.value.push(newPersona)
@@ -278,6 +504,7 @@ function createStore() {
     const nextMonth = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
     persona.complementLevel = level
     persona.complementMbti = calculateComplementMbti(persona.mbtiType, level, persona.mbtiScores)
+    persona.complementBigFive = calculateComplementBigFive(persona.bigFiveScores, level)
     persona.nextModifyTime = nextMonth.toISOString()
     saveToStorage()
 
@@ -328,15 +555,56 @@ function createStore() {
     saveToStorage()
   }
 
+  function addMemoryFact(content: string, category: MemoryFact['category'] = 'other', importance = 3) {
+    const persona = activePersona.value
+    if (!persona || !content) return
+    const trimmed = content.trim()
+    if (!trimmed) return
+    const existing = persona.memory.facts.find(f => f.content === trimmed)
+    if (existing) {
+      existing.importance = Math.min(5, existing.importance + 1)
+    } else {
+      persona.memory.facts.push({
+        id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        content: trimmed,
+        keywords: trimmed.replace(/[，。！？,.!?]/g, ' ').split(/\s+/).filter(w => w.length >= 2).slice(0, 4),
+        importance,
+        category,
+        createdAt: new Date().toISOString(),
+      })
+      if (persona.memory.facts.length > 50) persona.memory.facts.shift()
+    }
+    saveToStorage()
+  }
+
+  function updateBehaviorProfile(message: string, aiInferred?: Partial<BehaviorProfile>) {
+    const persona = activePersona.value
+    if (!persona || !message) return
+    const inferred = aiInferred || inferBehaviorFromMessage(message)
+    const prev = persona.behaviorProfile
+    persona.behaviorProfile = {
+      emotionTendency: inferred.emotionTendency || prev?.emotionTendency || '平稳理性',
+      decisionStyle: inferred.decisionStyle || prev?.decisionStyle || '综合型，需要结构化帮助',
+      expressionStyle: inferred.expressionStyle || prev?.expressionStyle || '陈述型，需要被理解',
+      deepNeed: inferred.deepNeed || prev?.deepNeed || '被理解与获得方向感',
+      updateCount: (prev?.updateCount || 0) + 1,
+      lastUpdatedAt: new Date().toISOString(),
+    }
+    saveToStorage()
+  }
+
   function saveToStorage() {
     try {
       const data = {
         userMbti: userMbti.value,
         mbtiProfile: mbtiProfile.value,
+        bigFiveProfile: bigFiveProfile.value,
         personas: personas.value,
         activePersonaId: activePersonaId.value,
         isTestCompleted: isTestCompleted.value,
         answers: answers.value,
+        isBigFiveTestCompleted: isBigFiveTestCompleted.value,
+        bigFiveAnswers: bigFiveAnswers.value,
       }
       try {
         uni.setStorageSync('persona_data', JSON.stringify(data))
@@ -371,19 +639,25 @@ function createStore() {
         const data = JSON.parse(dataStr)
         userMbti.value = data.userMbti || null
         mbtiProfile.value = data.mbtiProfile || null
+        bigFiveProfile.value = data.bigFiveProfile || null
         personas.value = (data.personas || []).map(normalizePersona)
         activePersonaId.value = data.activePersonaId || null
         isTestCompleted.value = data.isTestCompleted || false
         answers.value = data.answers || {}
+        isBigFiveTestCompleted.value = data.isBigFiveTestCompleted || false
+        bigFiveAnswers.value = data.bigFiveAnswers || {}
       }
     } catch (error) {
       console.error('加载数据失败:', error)
       userMbti.value = null
       mbtiProfile.value = null
+      bigFiveProfile.value = null
       personas.value = []
       activePersonaId.value = null
       isTestCompleted.value = false
       answers.value = {}
+      isBigFiveTestCompleted.value = false
+      bigFiveAnswers.value = {}
     }
   }
 
@@ -393,23 +667,34 @@ function createStore() {
     isTestCompleted.value = false
     mbtiProfile.value = null
     userMbti.value = null
+    bigFiveTestProgress.value = 0
+    bigFiveAnswers.value = {}
+    isBigFiveTestCompleted.value = false
+    bigFiveProfile.value = null
   }
 
   return reactive({
     userMbti,
     mbtiProfile,
+    bigFiveProfile,
     personas,
     activePersonaId,
     mbtiTestProgress,
     answers,
     isTestCompleted,
+    bigFiveTestProgress,
+    bigFiveAnswers,
+    isBigFiveTestCompleted,
     activePersona,
     canCreateMore,
     personaCount,
     questions,
+    bigFiveQuestionsList,
     suggestedNameList,
     setAnswer,
     completeMbtiTest,
+    setBigFiveAnswer,
+    completeBigFiveTest,
     createPersona,
     switchPersona,
     updateComplementLevel,
@@ -417,6 +702,8 @@ function createStore() {
     canModifyComplement,
     getRemainDays,
     addUserFact,
+    addMemoryFact,
+    updateBehaviorProfile,
     recordConversation,
     loadFromStorage,
     resetTest,

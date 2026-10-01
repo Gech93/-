@@ -22,6 +22,9 @@
           <text class="persona-name">{{ persona?.name || '' }}</text>
           <text class="persona-type">互补类型：{{ persona?.complementMbti || '' }}</text>
           <text class="persona-level">互补度 {{ persona?.complementLevel || 0 }}%</text>
+          <text class="persona-bigfive" v-if="persona?.complementBigFive">
+            大五互补：O{{ persona.complementBigFive.O }} C{{ persona.complementBigFive.C }} E{{ persona.complementBigFive.E }} A{{ persona.complementBigFive.A }} N{{ persona.complementBigFive.N }}
+          </text>
         </view>
         <view class="persona-check" v-if="persona?.isActive">✓</view>
       </view>
@@ -61,6 +64,21 @@ function createPersona() {
     })
     uni.navigateTo({
       url: '/pages/mbti-test/index'
+    })
+    return
+  }
+  if (!personaStore.isBigFiveTestCompleted) {
+    uni.showModal({
+      title: '提示',
+      content: '建议先完成大五人格测评，可以更精准地构建互补人格。',
+      confirmText: '去测评',
+      success: (res) => {
+        if (res.confirm) {
+          uni.navigateTo({
+            url: '/pages/mbti-test/index?mode=bigfive'
+          })
+        }
+      }
     })
     return
   }
@@ -154,6 +172,13 @@ function createPersona() {
   display: block;
   font-size: 24rpx;
   color: #667eea;
+}
+
+.persona-bigfive {
+  display: block;
+  font-size: 22rpx;
+  color: #999999;
+  margin-top: 4rpx;
 }
 
 .persona-check {

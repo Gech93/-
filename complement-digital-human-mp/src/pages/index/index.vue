@@ -20,7 +20,7 @@
 
     <view class="action-section">
       <button class="start-btn" @click="handleStart">
-        {{ personaStore.isTestCompleted ? '进入应用' : '开始体验' }}
+        {{ startBtnText }}
       </button>
       <text class="tips">无需注册 · 免费体验 · 随时开始</text>
     </view>
@@ -33,15 +33,15 @@
 
 <script setup lang="ts">
 import { usePersonaStore } from '../../stores/persona'
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 
 const personaStore = usePersonaStore()
 
 const features = [
   {
     icon: '🧠',
-    title: 'MBTI测试',
-    description: '发现你的人格类型',
+    title: '人格测评',
+    description: 'MBTI + 大五双维探索',
   },
   {
     icon: '💬',
@@ -59,16 +59,21 @@ onMounted(() => {
   personaStore.loadFromStorage()
 })
 
+const startBtnText = computed(() => {
+  if (!personaStore.isTestCompleted) return '开始体验'
+  return personaStore.isBigFiveTestCompleted ? '进入应用' : '继续大五测评'
+})
+
 function handleStart() {
-  if (personaStore.isTestCompleted) {
-    uni.navigateTo({
-      url: '/pages/persona-list/index'
-    })
-  } else {
-    uni.navigateTo({
-      url: '/pages/mbti-test/index'
-    })
+  if (!personaStore.isTestCompleted) {
+    uni.navigateTo({ url: '/pages/mbti-test/index' })
+    return
   }
+  if (!personaStore.isBigFiveTestCompleted) {
+    uni.navigateTo({ url: '/pages/mbti-test/index?mode=bigfive' })
+    return
+  }
+  uni.navigateTo({ url: '/pages/persona-list/index' })
 }
 </script>
 

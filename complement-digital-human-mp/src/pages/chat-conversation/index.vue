@@ -140,7 +140,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { usePersonaStore } from '../../stores/persona'
+import { usePersonaStore, findRelevantFacts, bigFiveMeta, bigFiveDims } from '../../stores/persona'
 
 interface StructuredReply {
   perspective: string
@@ -310,11 +310,12 @@ async function handleSend() {
     messages.value.push(aiMsg)
     saveMessages()
 
-    // 记忆层：提取用户事实并记录会话
+    // 记忆层：提取用户事实、更新行为画像并记录会话
     const persona = personaStore.activePersona
     if (persona) {
       persona.memory.summary = text.length > 40 ? text.slice(0, 40) + '…' : text
       maybeExtractUserFact(text)
+      personaStore.updateBehaviorProfile(text)
       personaStore.recordConversation()
     }
   } catch (error) {
@@ -382,27 +383,78 @@ function buildComplementGuidance(userMbti: string, complementMbti: string): stri
   return lines.join('\n') || '- 保持平衡而自然的回应方式'
 }
 
+function describeBigFiveProfile(bigFiveProfile: any): string {
+  if (!bigFiveProfile || !bigFiveProfile.scores) return ''
+  return bigFiveDims
+    .map(d => `${bigFiveMeta[d].label} ${bigFiveProfile.scores[d]}`)
+    .join('，')
+}
+
+function buildBigFiveGuidance(userScores: any, complementScores: any): string {
+  if (!userScores || !complementScores) return ''
+  const lines: string[] = []
+  bigFiveDims.forEach(d => {
+    const u = userScores[d]
+    const c = complementScores[d]
+    if (Math.abs(u - c) >= 10) {
+      const meta = bigFiveMeta[d]
+      const direction = c >= 60 ? meta.high : c <= 40 ? meta.low : '中性'
+      lines.push(`- 用户在「${meta.label}」维度偏「${u >= 60 ? meta.high : u <= 40 ? meta.low : '中性'}」(${u})，请以更「${direction}」(${c})的方式互补回应`)
+    }
+  })
+  return lines.join('\n') || ''
+}
+
+function describeBehaviorProfile(bp: any): string {
+  if (!bp) return ''
+  return [
+    `情绪倾向：${bp.emotionTendency}`,
+    `决策风格：${bp.decisionStyle}`,
+    `表达方式：${bp.expressionStyle}`,
+    `深层需求：${bp.deepNeed}`,
+  ].join('；')
+}
+
 function buildSystemPrompt(): string {
   const persona = personaStore.activePersona
   const userMbti = personaStore.userMbti || '未知'
   const profileText = describeMbtiProfile(personaStore.mbtiProfile)
+  const bigFiveText = describeBigFiveProfile(personaStore.bigFiveProfile)
   const complementMbti = persona?.complementMbti || '未知'
   const level = persona?.complementLevel ?? 50
   const style = persona?.communicationStyle
   const memory = persona?.memory
+  const behavior = persona?.behaviorProfile
 
   const parts: string[] = []
   parts.push(`你是「${persona?.name || '互补AI伙伴'}」，一个与用户人格互补的 AI 伙伴。`)
   parts.push(`用户人格类型：${userMbti}${profileText ? `（各维度强度：${profileText}）` : ''}`)
   parts.push(`你的互补人格类型：${complementMbti}，互补度 ${level}%（互补度越高，你与用户的人格差异越明显）。`)
+  if (personaStore.bigFiveProfile) {
+    parts.push(`用户大五人格：${bigFiveText}`)
+    if (persona?.complementBigFive) {
+      parts.push(`你的大五互补人格：${bigFiveDims.map(d => `${bigFiveMeta[d].label} ${persona.complementBigFive[d]}`).join('，')}`)
+    }
+  }
   parts.push('')
   parts.push('【互补维度指引】')
   parts.push(buildComplementGuidance(userMbti, complementMbti))
+  const bfGuidance = buildBigFiveGuidance(personaStore.bigFiveProfile?.scores, persona?.complementBigFive)
+  if (bfGuidance) {
+    parts.push('')
+    parts.push('【大五互补指引】')
+    parts.push(bfGuidance)
+  }
 
   if (style) {
     const formalityMap: Record<string, string> = { casual: '随和', neutral: '中性', formal: '正式' }
     parts.push('')
     parts.push(`【沟通风格】正式度：${formalityMap[style.formality] || '中性'}；语气：${style.tone.join('、')}；偏好：${style.signature}`)
+  }
+
+  if (behavior) {
+    parts.push('')
+    parts.push(`【你对用户的行为画像】${describeBehaviorProfile(behavior)}`)
   }
 
   if (memory && (memory.summary || (memory.userFacts && memory.userFacts.length))) {
@@ -413,6 +465,16 @@ function buildSystemPrompt(): string {
     }
     if (memory.summary) {
       parts.push(`最近话题：${memory.summary}`)
+    }
+  }
+
+  const lastUserText = [...messages.value].reverse().find(m => m.role === 'user')?.content
+  if (memory?.facts?.length && lastUserText) {
+    const relevant = findRelevantFacts(memory.facts, lastUserText, 3)
+    if (relevant.length) {
+      parts.push('')
+      parts.push('【与当前话题相关的用户经历/偏好】')
+      relevant.forEach(f => parts.push(`- ${f.content}（重要度 ${f.importance}/5）`))
     }
   }
 
@@ -606,11 +668,28 @@ function generateMockResponse(text: string): ChatResponse {
 
 const factPatterns = ['我喜欢', '我不喜欢', '我是', '我在', '我最近', '我经常', '我打算', '我想要', '我希望', '我的工作', '我的目标', '我担心', '我害怕']
 
+const factCategories: Record<string, 'preference' | 'identity' | 'plan' | 'emotion' | 'work' | 'other'> = {
+  '我喜欢': 'preference',
+  '我不喜欢': 'preference',
+  '我是': 'identity',
+  '我在': 'identity',
+  '我最近': 'plan',
+  '我经常': 'preference',
+  '我打算': 'plan',
+  '我想要': 'plan',
+  '我希望': 'plan',
+  '我的工作': 'work',
+  '我的目标': 'plan',
+  '我担心': 'emotion',
+  '我害怕': 'emotion',
+}
+
 function maybeExtractUserFact(text: string) {
   const hit = factPatterns.find(p => text.includes(p))
   if (hit) {
     const fact = text.length > 60 ? text.slice(0, 60) + '…' : text
     personaStore.addUserFact(fact)
+    personaStore.addMemoryFact(fact, factCategories[hit] || 'other', text.length > 30 ? 4 : 3)
   }
 }
 
