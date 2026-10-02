@@ -80,7 +80,7 @@ function handleStart() {
 <style scoped>
 .index-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--dopamine-gradient);
   padding: 100rpx 48rpx;
   display: flex;
   flex-direction: column;
@@ -115,7 +115,7 @@ function handleStart() {
   display: block;
   font-size: 80rpx;
   font-weight: bold;
-  color: #ffffff;
+  color: var(--dopamine-card);
   margin-bottom: 24rpx;
 }
 
@@ -151,7 +151,7 @@ function handleStart() {
   display: block;
   font-size: 32rpx;
   font-weight: bold;
-  color: #ffffff;
+  color: var(--dopamine-card);
   margin-bottom: 12rpx;
 }
 
@@ -170,8 +170,8 @@ function handleStart() {
 .start-btn {
   width: 100%;
   height: 120rpx;
-  background: #ffffff;
-  color: #667eea;
+  background: var(--dopamine-card);
+  color: var(--dopamine-primary);
   font-size: 40rpx;
   font-weight: bold;
   border-radius: 60rpx;

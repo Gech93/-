@@ -127,7 +127,7 @@
           max="100"
           step="5"
           @change="handleSliderChange"
-          activeColor="#667eea"
+          activeColor="var(--dopamine-primary)"
         />
         <view class="slider-labels">
           <text>像你</text>
@@ -268,7 +268,7 @@ function handleNext() {
 <style scoped>
 .create-container {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: var(--dopamine-bg);
   padding: 32rpx;
   padding-bottom: 200rpx;
 }
@@ -281,7 +281,7 @@ function handleNext() {
 
 .back-btn {
   font-size: 36rpx;
-  color: #666666;
+  color: var(--dopamine-text-sub);
 }
 
 .page-title {
@@ -289,7 +289,7 @@ function handleNext() {
   text-align: center;
   font-size: 40rpx;
   font-weight: bold;
-  color: #333333;
+  color: var(--dopamine-text);
 }
 
 .spacer {
@@ -310,52 +310,52 @@ function handleNext() {
 }
 
 .step.active .step-number {
-  background: #667eea;
-  color: #ffffff;
+  background: var(--dopamine-primary);
+  color: var(--dopamine-card);
 }
 
 .step.completed .step-number {
-  background: #667eea;
-  color: #ffffff;
+  background: var(--dopamine-primary);
+  color: var(--dopamine-card);
 }
 
 .step-number {
   width: 80rpx;
   height: 80rpx;
-  background: #e0e0e0;
+  background: var(--dopamine-border);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 36rpx;
   font-weight: bold;
-  color: #999999;
+  color: var(--dopamine-text-sub);
   margin-bottom: 16rpx;
 }
 
 .step-text {
   font-size: 28rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
 }
 
 .step.active .step-text {
-  color: #667eea;
+  color: var(--dopamine-primary);
 }
 
 .step-line {
   width: 120rpx;
   height: 8rpx;
-  background: #e0e0e0;
+  background: var(--dopamine-border);
   margin: 0 32rpx;
   margin-bottom: 60rpx;
 }
 
 .step-line.active {
-  background: #667eea;
+  background: var(--dopamine-primary);
 }
 
 .step-content {
-  background: #ffffff;
+  background: var(--dopamine-card);
   border-radius: 40rpx;
   padding: 64rpx;
   margin-bottom: 48rpx;
@@ -365,14 +365,14 @@ function handleNext() {
   display: block;
   font-size: 48rpx;
   font-weight: bold;
-  color: #333333;
+  color: var(--dopamine-text);
   margin-bottom: 24rpx;
 }
 
 .step-desc {
   display: block;
   font-size: 32rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
   margin-bottom: 64rpx;
 }
 
@@ -386,20 +386,20 @@ function handleNext() {
   display: flex;
   align-items: center;
   padding: 40rpx;
-  background: #f5f5f5;
+  background: var(--dopamine-bg);
   border-radius: 32rpx;
   border: 4rpx solid transparent;
 }
 
 .type-card.selected {
-  background: rgba(102, 126, 234, 0.1);
-  border-color: #667eea;
+  background: rgba(255, 107, 157, 0.12);
+  border-color: var(--dopamine-primary);
 }
 
 .type-icon {
   width: 112rpx;
   height: 112rpx;
-  background: #ffffff;
+  background: var(--dopamine-card);
   border-radius: 32rpx;
   display: flex;
   align-items: center;
@@ -416,21 +416,21 @@ function handleNext() {
   display: block;
   font-size: 36rpx;
   font-weight: bold;
-  color: #333333;
+  color: var(--dopamine-text);
   margin-bottom: 12rpx;
 }
 
 .type-desc {
   display: block;
   font-size: 28rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
 }
 
 .type-check {
   width: 64rpx;
   height: 64rpx;
-  background: #667eea;
-  color: #ffffff;
+  background: var(--dopamine-primary);
+  color: var(--dopamine-card);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -445,7 +445,7 @@ function handleNext() {
 .name-input {
   width: 100%;
   height: 112rpx;
-  background: #f5f5f5;
+  background: var(--dopamine-bg);
   border-radius: 32rpx;
   padding: 0 40rpx;
   font-size: 36rpx;
@@ -459,7 +459,7 @@ function handleNext() {
 .suggestions-label {
   display: block;
   font-size: 28rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
   margin-bottom: 24rpx;
 }
 
@@ -471,16 +471,16 @@ function handleNext() {
 
 .suggestion-tag {
   padding: 16rpx 32rpx;
-  background: #f5f5f5;
+  background: var(--dopamine-bg);
   border-radius: 24rpx;
   font-size: 28rpx;
-  color: #666666;
+  color: var(--dopamine-text-sub);
 }
 
 .preview-card {
   margin-top: 64rpx;
   padding: 64rpx;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--dopamine-gradient);
   border-radius: 40rpx;
   text-align: center;
 }
@@ -496,14 +496,14 @@ function handleNext() {
   margin: 0 auto 32rpx;
   font-size: 64rpx;
   font-weight: bold;
-  color: #ffffff;
+  color: var(--dopamine-card);
 }
 
 .preview-name {
   display: block;
   font-size: 48rpx;
   font-weight: bold;
-  color: #ffffff;
+  color: var(--dopamine-card);
   margin-bottom: 16rpx;
 }
 
@@ -524,7 +524,7 @@ function handleNext() {
   display: block;
   font-size: 28rpx;
   font-weight: bold;
-  color: #ffffff;
+  color: var(--dopamine-card);
   margin-bottom: 16rpx;
 }
 
@@ -553,7 +553,7 @@ function handleNext() {
   display: block;
   font-size: 48rpx;
   font-weight: bold;
-  color: #333333;
+  color: var(--dopamine-text);
   text-align: center;
   margin-bottom: 24rpx;
 }
@@ -561,13 +561,13 @@ function handleNext() {
 .success-desc {
   display: block;
   font-size: 32rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
   text-align: center;
   margin-bottom: 64rpx;
 }
 
 .complement-info {
-  background: #f5f5f5;
+  background: var(--dopamine-bg);
   border-radius: 32rpx;
   padding: 48rpx;
   margin-bottom: 48rpx;
@@ -580,22 +580,22 @@ function handleNext() {
 }
 
 .info-row:not(:last-child) {
-  border-bottom: 2rpx solid #e0e0e0;
+  border-bottom: 2rpx solid var(--dopamine-border);
 }
 
 .info-label {
   font-size: 32rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
 }
 
 .info-value {
   font-size: 32rpx;
   font-weight: bold;
-  color: #333333;
+  color: var(--dopamine-text);
 }
 
 .info-value.highlight {
-  color: #667eea;
+  color: var(--dopamine-primary);
 }
 
 .dims-value {
@@ -609,7 +609,7 @@ function handleNext() {
 .slider-label {
   display: block;
   font-size: 28rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
   margin-bottom: 32rpx;
 }
 
@@ -617,7 +617,7 @@ function handleNext() {
   display: flex;
   justify-content: space-between;
   font-size: 28rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
   margin-top: 16rpx;
 }
 
@@ -629,7 +629,7 @@ function handleNext() {
   display: flex;
   gap: 32rpx;
   padding: 40rpx;
-  background: #ffffff;
+  background: var(--dopamine-card);
   box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.05);
 }
 
@@ -643,17 +643,17 @@ function handleNext() {
 }
 
 .action-btn.back {
-  background: #f5f5f5;
-  color: #666666;
+  background: var(--dopamine-bg);
+  color: var(--dopamine-text-sub);
 }
 
 .action-btn.next {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #ffffff;
+  background: var(--dopamine-gradient);
+  color: var(--dopamine-card);
 }
 
 .action-btn.next[disabled] {
-  background: #e0e0e0;
-  color: #999999;
+  background: var(--dopamine-border);
+  color: var(--dopamine-text-sub);
 }
 </style>

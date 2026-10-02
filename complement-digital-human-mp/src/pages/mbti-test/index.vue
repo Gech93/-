@@ -179,7 +179,7 @@ function goBack() {
 <style scoped>
 .test-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--dopamine-gradient);
   padding: 48rpx;
 }
 
@@ -191,7 +191,7 @@ function goBack() {
 
 .back-btn {
   font-size: 36rpx;
-  color: #ffffff;
+  color: var(--dopamine-card);
 }
 
 .progress-info {
@@ -210,7 +210,7 @@ function goBack() {
 
 .progress-fill {
   height: 100%;
-  background: #ffffff;
+  background: var(--dopamine-card);
   border-radius: 4rpx;
   transition: width 0.3s ease;
 }
@@ -237,8 +237,8 @@ function goBack() {
   align-self: center;
   text-align: center;
   padding: 8rpx 32rpx;
-  background: rgba(102, 126, 234, 0.12);
-  color: #667eea;
+  background: rgba(255, 107, 157, 0.12);
+  color: var(--dopamine-primary);
   border-radius: 32rpx;
   font-size: 26rpx;
   margin-bottom: 16rpx;
@@ -247,7 +247,7 @@ function goBack() {
 .question-text {
   display: block;
   font-size: 36rpx;
-  color: #333333;
+  color: var(--dopamine-text);
   line-height: 1.6;
   text-align: center;
 }
@@ -278,15 +278,15 @@ function goBack() {
 
 .option-text {
   font-size: 32rpx;
-  color: #333333;
+  color: var(--dopamine-text);
   flex: 1;
 }
 
 .option-check {
   width: 48rpx;
   height: 48rpx;
-  background: #667eea;
-  color: #ffffff;
+  background: var(--dopamine-primary);
+  color: var(--dopamine-card);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -301,8 +301,8 @@ function goBack() {
 .next-btn {
   width: 100%;
   height: 96rpx;
-  background: #ffffff;
-  color: #667eea;
+  background: var(--dopamine-card);
+  color: var(--dopamine-primary);
   font-size: 36rpx;
   font-weight: bold;
   border-radius: 48rpx;
@@ -311,6 +311,6 @@ function goBack() {
 
 .next-btn[disabled] {
   background: rgba(255, 255, 255, 0.5);
-  color: rgba(102, 126, 234, 0.5);
+  color: rgba(255, 107, 157, 0.5);
 }
 </style>

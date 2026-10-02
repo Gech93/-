@@ -50,7 +50,7 @@
 
       <view class="setting-item">
         <text class="setting-label">使用云端网关</text>
-        <switch :checked="useCloudProxy" @change="toggleCloudProxy" color="#667eea" />
+        <switch :checked="useCloudProxy" @change="toggleCloudProxy" color="#ff6b9d" />
       </view>
       <view class="setting-hint">开启后，AI 请求将经你的 uniCloud 云函数转发，API Key 不再暴露在客户端；网关已启用令牌鉴权防滥用</view>
 
@@ -320,7 +320,7 @@ function goToPersona() {
 <style scoped>
 .settings-container {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: var(--dopamine-bg);
   padding: 32rpx;
 }
 
@@ -331,11 +331,11 @@ function goToPersona() {
 .page-title {
   font-size: 48rpx;
   font-weight: bold;
-  color: #333333;
+  color: var(--dopamine-text);
 }
 
 .settings-group {
-  background: #ffffff;
+  background: var(--dopamine-card);
   border-radius: 32rpx;
   padding: 32rpx;
   margin-bottom: 32rpx;
@@ -344,7 +344,7 @@ function goToPersona() {
 .group-title {
   display: block;
   font-size: 28rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
   margin-bottom: 24rpx;
 }
 
@@ -353,7 +353,7 @@ function goToPersona() {
   justify-content: space-between;
   align-items: center;
   padding: 24rpx 0;
-  border-bottom: 2rpx solid #f5f5f5;
+  border-bottom: 2rpx solid var(--dopamine-bg);
 }
 
 .setting-item:last-child {
@@ -362,21 +362,21 @@ function goToPersona() {
 
 .setting-label {
   font-size: 32rpx;
-  color: #333333;
+  color: var(--dopamine-text);
 }
 
 .setting-value {
   font-size: 32rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
 }
 
 .danger {
-  color: #e64340;
+  color: var(--dopamine-danger);
 }
 
 .setting-arrow {
   font-size: 32rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
 }
 
 .footer {
@@ -388,13 +388,13 @@ function goToPersona() {
   display: block;
   font-size: 32rpx;
   font-weight: bold;
-  color: #667eea;
+  color: var(--dopamine-primary);
   margin-bottom: 8rpx;
 }
 
 .footer-subtext {
   display: block;
   font-size: 24rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
 }
 </style>

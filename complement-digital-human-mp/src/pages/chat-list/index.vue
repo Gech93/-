@@ -173,7 +173,7 @@ function goToPersona() {
 <style scoped>
 .chat-container {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: var(--dopamine-bg);
   padding: 32rpx;
   padding-bottom: 240rpx;
 }
@@ -185,11 +185,11 @@ function goToPersona() {
 .page-title {
   font-size: 48rpx;
   font-weight: bold;
-  color: #333333;
+  color: var(--dopamine-text);
 }
 
 .persona-switcher {
-  background: #ffffff;
+  background: var(--dopamine-card);
   padding: 40rpx;
   border-radius: 32rpx;
   display: flex;
@@ -201,7 +201,7 @@ function goToPersona() {
 .persona-avatar {
   width: 112rpx;
   height: 112rpx;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--dopamine-gradient);
   border-radius: 32rpx;
   display: flex;
   align-items: center;
@@ -209,7 +209,7 @@ function goToPersona() {
   margin-right: 32rpx;
   font-size: 40rpx;
   font-weight: bold;
-  color: #ffffff;
+  color: var(--dopamine-card);
 }
 
 .persona-info {
@@ -220,19 +220,19 @@ function goToPersona() {
   display: block;
   font-size: 36rpx;
   font-weight: bold;
-  color: #333333;
+  color: var(--dopamine-text);
   margin-bottom: 8rpx;
 }
 
 .persona-mbti {
   display: block;
   font-size: 28rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
 }
 
 .switch-icon {
   font-size: 28rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
   margin-left: 32rpx;
 }
 
@@ -251,22 +251,22 @@ function goToPersona() {
   display: block;
   font-size: 48rpx;
   font-weight: bold;
-  color: #333333;
+  color: var(--dopamine-text);
   margin-bottom: 24rpx;
 }
 
 .empty-desc {
   display: block;
   font-size: 32rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
   margin-bottom: 64rpx;
 }
 
 .start-chat-btn {
   width: 400rpx;
   height: 96rpx;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #ffffff;
+  background: var(--dopamine-gradient);
+  color: var(--dopamine-card);
   font-size: 36rpx;
   font-weight: bold;
   border-radius: 48rpx;
@@ -280,7 +280,7 @@ function goToPersona() {
 }
 
 .session-item {
-  background: #ffffff;
+  background: var(--dopamine-card);
   border-radius: 32rpx;
   padding: 32rpx;
   display: flex;
@@ -291,7 +291,7 @@ function goToPersona() {
 .session-avatar {
   width: 88rpx;
   height: 88rpx;
-  background: rgba(102, 126, 234, 0.12);
+  background: rgba(255, 107, 157, 0.12);
   border-radius: 24rpx;
   display: flex;
   align-items: center;
@@ -299,7 +299,7 @@ function goToPersona() {
   margin-right: 24rpx;
   font-size: 36rpx;
   font-weight: bold;
-  color: #667eea;
+  color: var(--dopamine-primary);
   flex-shrink: 0;
 }
 
@@ -318,7 +318,7 @@ function goToPersona() {
 .session-title {
   font-size: 32rpx;
   font-weight: bold;
-  color: #333333;
+  color: var(--dopamine-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -328,14 +328,14 @@ function goToPersona() {
 
 .session-time {
   font-size: 24rpx;
-  color: #bbbbbb;
+  color: var(--dopamine-text-sub);
   flex-shrink: 0;
 }
 
 .session-preview {
   display: block;
   font-size: 28rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -358,8 +358,8 @@ function goToPersona() {
 .new-chat-btn {
   width: 100%;
   height: 112rpx;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #ffffff;
+  background: var(--dopamine-gradient);
+  color: var(--dopamine-card);
   font-size: 36rpx;
   font-weight: bold;
   border-radius: 56rpx;
@@ -388,7 +388,7 @@ function goToPersona() {
 
 .picker-content {
   width: 100%;
-  background: #ffffff;
+  background: var(--dopamine-card);
   border-radius: 48rpx 48rpx 0 0;
   padding: 64rpx 48rpx;
   max-height: 70vh;
@@ -398,7 +398,7 @@ function goToPersona() {
   display: block;
   font-size: 48rpx;
   font-weight: bold;
-  color: #333333;
+  color: var(--dopamine-text);
   text-align: center;
   margin-bottom: 48rpx;
 }
@@ -407,21 +407,21 @@ function goToPersona() {
   display: flex;
   align-items: center;
   padding: 32rpx;
-  background: #f5f5f5;
+  background: var(--dopamine-bg);
   border-radius: 32rpx;
   margin-bottom: 24rpx;
   border: 4rpx solid transparent;
 }
 
 .picker-item.active {
-  background: rgba(102, 126, 234, 0.1);
-  border-color: #667eea;
+  background: rgba(255, 107, 157, 0.12);
+  border-color: var(--dopamine-primary);
 }
 
 .picker-avatar {
   width: 112rpx;
   height: 112rpx;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--dopamine-gradient);
   border-radius: 32rpx;
   display: flex;
   align-items: center;
@@ -429,7 +429,7 @@ function goToPersona() {
   margin-right: 32rpx;
   font-size: 40rpx;
   font-weight: bold;
-  color: #ffffff;
+  color: var(--dopamine-card);
 }
 
 .picker-info {
@@ -440,21 +440,21 @@ function goToPersona() {
   display: block;
   font-size: 36rpx;
   font-weight: bold;
-  color: #333333;
+  color: var(--dopamine-text);
   margin-bottom: 8rpx;
 }
 
 .picker-desc {
   display: block;
   font-size: 28rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
 }
 
 .picker-check {
   width: 64rpx;
   height: 64rpx;
-  background: #667eea;
-  color: #ffffff;
+  background: var(--dopamine-primary);
+  color: var(--dopamine-card);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -465,8 +465,8 @@ function goToPersona() {
 .picker-close {
   width: 100%;
   height: 112rpx;
-  background: #f5f5f5;
-  color: #666666;
+  background: var(--dopamine-bg);
+  color: var(--dopamine-text-sub);
   font-size: 36rpx;
   border-radius: 56rpx;
   border: none;

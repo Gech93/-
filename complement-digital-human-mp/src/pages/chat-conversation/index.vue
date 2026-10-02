@@ -83,7 +83,7 @@
           max="100"
           step="10"
           @change="updateComplementLevel"
-          activeColor="#667eea"
+          activeColor="#ff6b9d"
         />
         <text class="slider-value">{{ complementLevel }}%</text>
       </view>
@@ -483,23 +483,23 @@ function goBack() {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f5f5f5;
+  background: var(--dopamine-bg);
   position: relative;
 }
 
 .nav-header {
   height: 120rpx;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--dopamine-gradient);
   display: flex;
   align-items: center;
   padding: 0 40rpx;
   padding-top: 60rpx;
-  color: #ffffff;
+  color: var(--dopamine-card);
 }
 
 .nav-left, .nav-right {
   font-size: 56rpx;
-  color: #ffffff;
+  color: var(--dopamine-card);
   background: none;
   border: none;
   padding: 20rpx;
@@ -540,7 +540,7 @@ function goBack() {
 .welcome-avatar {
   width: 112rpx;
   height: 112rpx;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--dopamine-gradient);
   border-radius: 32rpx;
   display: flex;
   align-items: center;
@@ -549,7 +549,7 @@ function goBack() {
   flex-shrink: 0;
   font-size: 40rpx;
   font-weight: bold;
-  color: #ffffff;
+  color: var(--dopamine-card);
 }
 
 .welcome-content {
@@ -559,7 +559,7 @@ function goBack() {
 .welcome-text {
   display: block;
   font-size: 32rpx;
-  color: #666666;
+  color: var(--dopamine-text-sub);
   line-height: 1.6;
   margin-bottom: 16rpx;
 }
@@ -567,7 +567,7 @@ function goBack() {
 .welcome-subtitle {
   display: block;
   font-size: 28rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
   margin-bottom: 32rpx;
 }
 
@@ -580,8 +580,8 @@ function goBack() {
 .suggestion-chip {
   display: inline-block;
   padding: 16rpx 32rpx;
-  background: rgba(102, 126, 234, 0.1);
-  color: #667eea;
+  background: rgba(255, 107, 157, 0.12);
+  color: var(--dopamine-primary);
   border-radius: 40rpx;
   font-size: 28rpx;
 }
@@ -596,11 +596,11 @@ function goBack() {
 }
 
 .message-item.user .message-content {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--dopamine-gradient);
 }
 
 .message-item.user .message-text {
-  color: #ffffff;
+  color: var(--dopamine-card);
 }
 
 .message-item.user .message-time {
@@ -610,7 +610,7 @@ function goBack() {
 .message-avatar {
   width: 96rpx;
   height: 96rpx;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--dopamine-gradient);
   border-radius: 24rpx;
   display: flex;
   align-items: center;
@@ -619,12 +619,12 @@ function goBack() {
   flex-shrink: 0;
   font-size: 36rpx;
   font-weight: bold;
-  color: #ffffff;
+  color: var(--dopamine-card);
 }
 
 .message-content {
   max-width: 70%;
-  background: #ffffff;
+  background: var(--dopamine-card);
   padding: 32rpx;
   border-radius: 32rpx;
 }
@@ -632,7 +632,7 @@ function goBack() {
 .message-text {
   display: block;
   font-size: 32rpx;
-  color: #333333;
+  color: var(--dopamine-text);
   line-height: 1.6;
   white-space: pre-wrap;
 }
@@ -644,7 +644,7 @@ function goBack() {
 .suggestion-item {
   display: flex;
   align-items: flex-start;
-  background: rgba(102, 126, 234, 0.08);
+  background: rgba(255, 107, 157, 0.08);
   border-radius: 16rpx;
   padding: 16rpx 20rpx;
   margin-bottom: 12rpx;
@@ -655,8 +655,8 @@ function goBack() {
   height: 36rpx;
   line-height: 36rpx;
   text-align: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #ffffff;
+  background: var(--dopamine-gradient);
+  color: var(--dopamine-card);
   border-radius: 50%;
   font-size: 24rpx;
   flex-shrink: 0;
@@ -666,20 +666,20 @@ function goBack() {
 .suggestion-text {
   flex: 1;
   font-size: 28rpx;
-  color: #444444;
+  color: var(--dopamine-text);
   line-height: 1.5;
 }
 
 .follow-up {
   margin-top: 24rpx;
   padding: 20rpx 24rpx;
-  background: rgba(118, 75, 162, 0.08);
+  background: rgba(167, 139, 250, 0.12);
   border-radius: 16rpx;
 }
 
 .follow-up-text {
   font-size: 28rpx;
-  color: #764ba2;
+  color: var(--dopamine-purple);
   line-height: 1.5;
 }
 
@@ -692,16 +692,16 @@ function goBack() {
 .feedback-btn {
   padding: 12rpx 28rpx;
   border-radius: 32rpx;
-  background: #f5f5f5;
-  color: #666666;
+  background: var(--dopamine-bg);
+  color: var(--dopamine-text-sub);
   font-size: 26rpx;
-  border: 1rpx solid #eeeeee;
+  border: 1rpx solid var(--dopamine-border);
 }
 
 .message-time {
   display: block;
   font-size: 24rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
   margin-top: 16rpx;
   text-align: right;
 }
@@ -716,14 +716,14 @@ function goBack() {
   display: flex;
   gap: 12rpx;
   padding: 32rpx;
-  background: #ffffff;
+  background: var(--dopamine-card);
   border-radius: 32rpx;
 }
 
 .typing-dot {
   width: 20rpx;
   height: 20rpx;
-  background: #667eea;
+  background: var(--dopamine-primary);
   border-radius: 50%;
   animation: typing 1.4s infinite;
 }
@@ -746,7 +746,7 @@ function goBack() {
 }
 
 .input-section {
-  background: #ffffff;
+  background: var(--dopamine-card);
   padding: 40rpx;
   padding-bottom: calc(40rpx + constant(safe-area-inset-bottom));
   box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.05);
@@ -760,13 +760,13 @@ function goBack() {
 
 .slider-label {
   font-size: 28rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
   margin-right: 24rpx;
 }
 
 .slider-value {
   font-size: 28rpx;
-  color: #667eea;
+  color: var(--dopamine-primary);
   font-weight: bold;
   min-width: 100rpx;
   text-align: right;
@@ -781,25 +781,25 @@ function goBack() {
 
 .guide-item {
   font-size: 24rpx;
-  color: #bbbbbb;
+  color: var(--dopamine-text-sub);
   padding: 6rpx 16rpx;
   border-radius: 24rpx;
 }
 
 .guide-item.active {
-  color: #667eea;
-  background: rgba(102, 126, 234, 0.1);
+  color: var(--dopamine-primary);
+  background: rgba(255, 107, 157, 0.12);
   font-weight: bold;
 }
 
 .guide-arrow {
   font-size: 24rpx;
-  color: #dddddd;
+  color: var(--dopamine-border);
 }
 
 .guide-hint {
   font-size: 24rpx;
-  color: #ff9800;
+  color: var(--dopamine-yellow);
   margin-left: 16rpx;
 }
 
@@ -811,7 +811,7 @@ function goBack() {
 .message-input {
   flex: 1;
   height: 96rpx;
-  background: #f5f5f5;
+  background: var(--dopamine-bg);
   border-radius: 48rpx;
   padding: 0 40rpx;
   font-size: 32rpx;
@@ -821,8 +821,8 @@ function goBack() {
 .send-btn {
   width: 200rpx;
   height: 96rpx;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #ffffff;
+  background: var(--dopamine-gradient);
+  color: var(--dopamine-card);
   font-size: 32rpx;
   font-weight: bold;
   border-radius: 48rpx;
@@ -857,7 +857,7 @@ function goBack() {
   display: block;
   font-size: 48rpx;
   font-weight: bold;
-  color: #333;
+  color: var(--dopamine-text);
   margin-bottom: 48rpx;
   text-align: center;
 }
@@ -869,14 +869,14 @@ function goBack() {
 .form-label {
   display: block;
   font-size: 32rpx;
-  color: #666;
+  color: var(--dopamine-text-sub);
   margin-bottom: 16rpx;
 }
 
 .form-input {
   width: 100%;
   height: 96rpx;
-  background: #f5f5f5;
+  background: var(--dopamine-bg);
   border-radius: 24rpx;
   padding: 0 32rpx;
   font-size: 32rpx;
@@ -887,12 +887,12 @@ function goBack() {
 .form-hint {
   display: block;
   font-size: 24rpx;
-  color: #999;
+  color: var(--dopamine-text-sub);
   margin-top: 16rpx;
 }
 
 .form-hint.warning {
-  color: #e6a23c;
+  color: var(--dopamine-yellow);
 }
 
 .modal-actions {
@@ -911,22 +911,22 @@ function goBack() {
 }
 
 .btn-cancel {
-  background: #f5f5f5;
-  color: #666;
+  background: var(--dopamine-bg);
+  color: var(--dopamine-text-sub);
 }
 
 .btn-save {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--dopamine-gradient);
   color: white;
 }
 
 .api-info {
   margin-top: 48rpx;
   padding: 32rpx;
-  background: #f5f5f5;
+  background: var(--dopamine-bg);
   border-radius: 24rpx;
   font-size: 28rpx;
-  color: #666;
+  color: var(--dopamine-text-sub);
   white-space: pre-line;
 }
 </style>

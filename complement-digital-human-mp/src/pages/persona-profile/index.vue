@@ -237,13 +237,13 @@ function goBack() {
 <style scoped>
 .profile-container {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: var(--dopamine-bg);
   padding: 32rpx;
   padding-bottom: 240rpx;
 }
 
 .hero-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--dopamine-gradient);
   border-radius: 40rpx;
   padding: 64rpx 48rpx;
   text-align: center;
@@ -261,14 +261,14 @@ function goBack() {
   margin: 0 auto 32rpx;
   font-size: 56rpx;
   font-weight: bold;
-  color: #ffffff;
+  color: var(--dopamine-card);
 }
 
 .hero-name {
   display: block;
   font-size: 48rpx;
   font-weight: bold;
-  color: #ffffff;
+  color: var(--dopamine-card);
   margin-bottom: 16rpx;
 }
 
@@ -291,7 +291,7 @@ function goBack() {
   background: rgba(255, 255, 255, 0.2);
   border-radius: 20rpx;
   font-size: 24rpx;
-  color: #ffffff;
+  color: var(--dopamine-card);
 }
 
 .hero-meta {
@@ -306,7 +306,7 @@ function goBack() {
 }
 
 .section-card {
-  background: #ffffff;
+  background: var(--dopamine-card);
   border-radius: 32rpx;
   padding: 48rpx;
   margin-bottom: 32rpx;
@@ -316,14 +316,14 @@ function goBack() {
   display: block;
   font-size: 36rpx;
   font-weight: bold;
-  color: #333333;
+  color: var(--dopamine-text);
   margin-bottom: 12rpx;
 }
 
 .section-desc {
   display: block;
   font-size: 28rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
   margin-bottom: 32rpx;
 }
 
@@ -337,28 +337,28 @@ function goBack() {
   display: flex;
   align-items: center;
   padding: 24rpx;
-  background: #f5f5f5;
+  background: var(--dopamine-bg);
   border-radius: 24rpx;
 }
 
 .dim-letter {
   width: 72rpx;
   height: 72rpx;
-  background: #667eea;
+  background: var(--dopamine-primary);
   border-radius: 20rpx;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 36rpx;
   font-weight: bold;
-  color: #ffffff;
+  color: var(--dopamine-card);
   margin-right: 24rpx;
 }
 
 .dim-name {
   font-size: 30rpx;
   font-weight: bold;
-  color: #333333;
+  color: var(--dopamine-text);
   margin-right: 24rpx;
   width: 120rpx;
 }
@@ -366,7 +366,7 @@ function goBack() {
 .dim-desc {
   flex: 1;
   font-size: 26rpx;
-  color: #666666;
+  color: var(--dopamine-text-sub);
 }
 
 .bigfive-list {
@@ -385,18 +385,18 @@ function goBack() {
 .bigfive-label {
   font-size: 28rpx;
   font-weight: bold;
-  color: #333333;
+  color: var(--dopamine-text);
 }
 
 .bigfive-value {
   font-size: 28rpx;
   font-weight: bold;
-  color: #667eea;
+  color: var(--dopamine-primary);
 }
 
 .bigfive-track {
   height: 16rpx;
-  background: #f0f0f0;
+  background: var(--dopamine-border);
   border-radius: 8rpx;
   overflow: hidden;
   margin-bottom: 12rpx;
@@ -404,13 +404,13 @@ function goBack() {
 
 .bigfive-fill {
   height: 100%;
-  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  background: var(--dopamine-gradient);
   border-radius: 8rpx;
 }
 
 .bigfive-meaning {
   font-size: 24rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
 }
 
 .style-row {
@@ -419,19 +419,19 @@ function goBack() {
 }
 
 .style-row:not(:last-child) {
-  border-bottom: 2rpx solid #f0f0f0;
+  border-bottom: 2rpx solid var(--dopamine-border);
 }
 
 .style-label {
   width: 140rpx;
   font-size: 28rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
 }
 
 .style-value {
   flex: 1;
   font-size: 28rpx;
-  color: #333333;
+  color: var(--dopamine-text);
 }
 
 .guide-list {
@@ -442,14 +442,14 @@ function goBack() {
 
 .guide-item {
   padding: 24rpx;
-  background: #f5f5f5;
+  background: var(--dopamine-bg);
   border-radius: 24rpx;
   border: 2rpx solid transparent;
 }
 
 .guide-item.active {
-  background: rgba(102, 126, 234, 0.08);
-  border-color: #667eea;
+  background: rgba(255, 107, 157, 0.08);
+  border-color: var(--dopamine-primary);
 }
 
 .guide-head {
@@ -460,35 +460,35 @@ function goBack() {
 
 .guide-range {
   padding: 4rpx 16rpx;
-  background: #e0e0e0;
+  background: var(--dopamine-border);
   border-radius: 16rpx;
   font-size: 22rpx;
   font-weight: bold;
-  color: #666666;
+  color: var(--dopamine-text-sub);
   margin-right: 16rpx;
 }
 
 .guide-range.active {
-  background: #667eea;
-  color: #ffffff;
+  background: var(--dopamine-primary);
+  color: var(--dopamine-card);
 }
 
 .guide-name {
   font-size: 30rpx;
   font-weight: bold;
-  color: #333333;
+  color: var(--dopamine-text);
 }
 
 .guide-desc {
   display: block;
   font-size: 26rpx;
-  color: #666666;
+  color: var(--dopamine-text-sub);
 }
 
 .guide-tip {
   display: block;
   font-size: 24rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
   margin-top: 24rpx;
 }
 
@@ -502,7 +502,7 @@ function goBack() {
   display: flex;
   align-items: center;
   padding: 24rpx;
-  background: #f5f5f5;
+  background: var(--dopamine-bg);
   border-radius: 24rpx;
 }
 
@@ -519,14 +519,14 @@ function goBack() {
   display: block;
   font-size: 30rpx;
   font-weight: bold;
-  color: #333333;
+  color: var(--dopamine-text);
   margin-bottom: 8rpx;
 }
 
 .scene-desc {
   display: block;
   font-size: 26rpx;
-  color: #666666;
+  color: var(--dopamine-text-sub);
 }
 
 .feedback-stats {
@@ -550,31 +550,31 @@ function goBack() {
   display: block;
   font-size: 48rpx;
   font-weight: bold;
-  color: #333333;
+  color: var(--dopamine-text);
 }
 
 .stat-label {
   display: block;
   font-size: 24rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
 }
 
 .stat-divider {
   width: 2rpx;
   height: 80rpx;
-  background: #e0e0e0;
+  background: var(--dopamine-border);
 }
 
 .memory-list {
   margin-top: 32rpx;
-  border-top: 1rpx solid #f0f0f0;
+  border-top: 1rpx solid var(--dopamine-border);
   padding-top: 24rpx;
 }
 
 .memory-title {
   display: block;
   font-size: 26rpx;
-  color: #764ba2;
+  color: var(--dopamine-purple);
   font-weight: bold;
   margin-bottom: 16rpx;
 }
@@ -582,7 +582,7 @@ function goBack() {
 .memory-item {
   display: flex;
   align-items: center;
-  background: rgba(102, 126, 234, 0.06);
+  background: rgba(255, 107, 157, 0.06);
   border-radius: 16rpx;
   padding: 16rpx 20rpx;
   margin-bottom: 12rpx;
@@ -597,13 +597,13 @@ function goBack() {
 .memory-text {
   flex: 1;
   font-size: 26rpx;
-  color: #444444;
+  color: var(--dopamine-text);
   line-height: 1.4;
 }
 
 .memory-count {
   font-size: 24rpx;
-  color: #667eea;
+  color: var(--dopamine-primary);
   font-weight: bold;
   margin-left: 12rpx;
   flex-shrink: 0;
@@ -612,10 +612,10 @@ function goBack() {
 .memory-empty {
   margin-top: 24rpx;
   padding: 24rpx;
-  background: #f9f9f9;
+  background: var(--dopamine-bg);
   border-radius: 16rpx;
   font-size: 24rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
   line-height: 1.6;
 }
 
@@ -627,7 +627,7 @@ function goBack() {
   display: flex;
   gap: 32rpx;
   padding: 40rpx;
-  background: #ffffff;
+  background: var(--dopamine-card);
   box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.05);
 }
 
@@ -641,12 +641,12 @@ function goBack() {
 }
 
 .action-btn.chat {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #ffffff;
+  background: var(--dopamine-gradient);
+  color: var(--dopamine-card);
 }
 
 .action-btn.back {
-  background: #f5f5f5;
-  color: #666666;
+  background: var(--dopamine-bg);
+  color: var(--dopamine-text-sub);
 }
 </style>

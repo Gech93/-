@@ -91,7 +91,7 @@ function createPersona() {
 <style scoped>
 .persona-container {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: var(--dopamine-bg);
   padding: 32rpx;
 }
 
@@ -105,13 +105,13 @@ function createPersona() {
 .page-title {
   font-size: 48rpx;
   font-weight: bold;
-  color: #333333;
+  color: var(--dopamine-text);
 }
 
 .add-btn {
   padding: 16rpx 32rpx;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #ffffff;
+  background: var(--dopamine-gradient);
+  color: var(--dopamine-card);
   border-radius: 32rpx;
   font-size: 28rpx;
 }
@@ -126,19 +126,19 @@ function createPersona() {
   display: flex;
   align-items: center;
   padding: 32rpx;
-  background: #ffffff;
+  background: var(--dopamine-card);
   border-radius: 32rpx;
   border: 4rpx solid transparent;
 }
 
 .persona-card.active {
-  border-color: #667eea;
+  border-color: var(--dopamine-primary);
 }
 
 .persona-avatar {
   width: 112rpx;
   height: 112rpx;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--dopamine-gradient);
   border-radius: 32rpx;
   display: flex;
   align-items: center;
@@ -146,7 +146,7 @@ function createPersona() {
   margin-right: 24rpx;
   font-size: 40rpx;
   font-weight: bold;
-  color: #ffffff;
+  color: var(--dopamine-card);
 }
 
 .persona-info {
@@ -157,35 +157,35 @@ function createPersona() {
   display: block;
   font-size: 36rpx;
   font-weight: bold;
-  color: #333333;
+  color: var(--dopamine-text);
   margin-bottom: 8rpx;
 }
 
 .persona-type {
   display: block;
   font-size: 28rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
   margin-bottom: 4rpx;
 }
 
 .persona-level {
   display: block;
   font-size: 24rpx;
-  color: #667eea;
+  color: var(--dopamine-primary);
 }
 
 .persona-bigfive {
   display: block;
   font-size: 22rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
   margin-top: 4rpx;
 }
 
 .persona-check {
   width: 64rpx;
   height: 64rpx;
-  background: #667eea;
-  color: #ffffff;
+  background: var(--dopamine-primary);
+  color: var(--dopamine-card);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -207,15 +207,15 @@ function createPersona() {
 .empty-text {
   display: block;
   font-size: 32rpx;
-  color: #999999;
+  color: var(--dopamine-text-sub);
   margin-bottom: 48rpx;
 }
 
 .create-btn {
   width: 400rpx;
   height: 96rpx;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #ffffff;
+  background: var(--dopamine-gradient);
+  color: var(--dopamine-card);
   font-size: 36rpx;
   font-weight: bold;
   border-radius: 48rpx;
