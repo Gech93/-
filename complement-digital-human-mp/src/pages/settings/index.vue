@@ -52,7 +52,7 @@
         <text class="setting-label">使用云端网关</text>
         <switch :checked="useCloudProxy" @change="toggleCloudProxy" color="#667eea" />
       </view>
-      <view class="setting-hint">开启后，AI 请求将经你的 uniCloud 云函数转发，API Key 不再暴露在客户端</view>
+      <view class="setting-hint">开启后，AI 请求将经你的 uniCloud 云函数转发，API Key 不再暴露在客户端；网关已启用令牌鉴权防滥用</view>
 
       <view class="setting-item column">
         <text class="setting-label">网关地址</text>
@@ -62,13 +62,27 @@
           placeholder="https://xxx.next.bspapp.com/chat-gateway"
           @blur="saveGatewayUrl"
         />
-        <text class="setting-hint">在 uniCloud 控制台部署 chat-gateway 云函数并配置环境变量 DEEPSEEK_API_KEY，然后把云函数 URL 粘贴到这里</text>
+        <text class="setting-hint">在 uniCloud 控制台部署 chat-gateway 云函数，配置环境变量 DEEPSEEK_API_KEY 与 CHAT_GATEWAY_TOKEN，然后把云函数 URL 粘贴到这里</text>
+      </view>
+
+      <view class="setting-item column">
+        <text class="setting-label">网关令牌</text>
+        <input
+          v-model="gatewayToken"
+          class="setting-input"
+          placeholder="与云函数 CHAT_GATEWAY_TOKEN 保持一致"
+          password
+          @blur="saveGatewayToken"
+        />
+        <text class="setting-hint">访问令牌用于鉴权，防止他人盗用你的网关与 AI 额度，请勿外传</text>
       </view>
     </view>
 
     <view class="settings-group">
       <text class="group-title">功能</text>
-      
+
+      <view class="setting-hint">测评结果基于轻量自研算法生成，仅供自我探索与参考，不构成专业人格评估</view>
+
       <view class="setting-item" @click="goToMbti">
         <text class="setting-label">重新测试MBTI</text>
         <text class="setting-arrow">→</text>
@@ -104,6 +118,7 @@ const appVersion = `v${manifest.versionName || '1.0.0'}`
 
 const useCloudProxy = ref(uni.getStorageSync('use_cloud_proxy') === true)
 const gatewayUrl = ref(uni.getStorageSync('cloud_gateway_url') || '')
+const gatewayToken = ref(uni.getStorageSync('cloud_gateway_token') || '')
 
 function toggleCloudProxy(e: Event) {
   const detail = (e as unknown as { detail?: { value?: boolean } }).detail
@@ -119,6 +134,14 @@ function saveGatewayUrl() {
   uni.setStorageSync('cloud_gateway_url', gatewayUrl.value.trim())
   uni.showToast({
     title: '网关地址已保存',
+    icon: 'none'
+  })
+}
+
+function saveGatewayToken() {
+  uni.setStorageSync('cloud_gateway_token', gatewayToken.value.trim())
+  uni.showToast({
+    title: '网关令牌已保存',
     icon: 'none'
   })
 }

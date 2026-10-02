@@ -108,13 +108,13 @@ function computeDimensionConsistency(answers: Record<number, number>): Record<ke
       if (q.reversed) reverse.push(scored)
       else forward.push(scored)
     })
-    // 一致性 = 正题得分与反题反转得分越接近越一致；只有单侧题目时视为一致
+    // 一致性 = 正题得分与反题反转得分越接近越一致；只有单侧题目时无法交叉验证，取保守默认值 0.5（既不奖励也不惩罚，避免置信度虚高）
     if (forward.length && reverse.length) {
       const avgF = forward.reduce((a, b) => a + b, 0) / forward.length
       const avgR = reverse.reduce((a, b) => a + b, 0) / reverse.length
       result[d] = Math.max(0, Math.min(1, 1 - Math.abs(avgF - avgR) / 100))
     } else {
-      result[d] = 1
+      result[d] = 0.5
     }
   })
   return result
