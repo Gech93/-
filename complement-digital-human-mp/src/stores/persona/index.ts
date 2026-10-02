@@ -62,11 +62,9 @@ function createStore() {
 
   const personaCount = computed(() => personas.value.length)
 
-  const questions = computed(() => mbtiQuestions)
-
-  const bigFiveQuestionsList = computed(() => bigFiveQuestions)
-
-  const suggestedNameList = computed(() => suggestedTypes)
+  const questions = mbtiQuestions
+  const bigFiveQuestionsList = bigFiveQuestions
+  const suggestedNameList = suggestedTypes
 
   function calculateMbtiProfile(): MbtiProfile {
     const counts = { E: 0, I: 0, S: 0, N: 0, T: 0, F: 0, J: 0, P: 0 }
