@@ -413,17 +413,26 @@ function createStore() {
         : {}
   }
 
-  function resetTest() {
+  function resetMbtiTest() {
     mbtiTestProgress.value = 0
     answers.value = {}
     isTestCompleted.value = false
     mbtiProfile.value = null
     userMbti.value = null
+    saveToStorage()
+  }
+
+  function resetBigFiveTest() {
     bigFiveTestProgress.value = 0
     bigFiveAnswers.value = {}
     isBigFiveTestCompleted.value = false
     bigFiveProfile.value = null
     saveToStorage()
+  }
+
+  function resetTest() {
+    resetMbtiTest()
+    resetBigFiveTest()
   }
 
   return reactive({
@@ -461,6 +470,8 @@ function createStore() {
     recordConversation,
     loadFromStorage,
     resetTest,
+    resetMbtiTest,
+    resetBigFiveTest,
   })
 }
 

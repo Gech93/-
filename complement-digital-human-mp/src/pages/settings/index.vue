@@ -110,20 +110,21 @@
 import { ref } from 'vue'
 import { usePersonaStore } from '../../stores/persona'
 import { buildBackupJson, importBackupJson, clearAllConversations } from '../../utils/backup'
+import { readStorage, writeStorage, STORAGE_KEYS } from '../../utils/storage'
 import manifest from '../../manifest.json'
 
 const personaStore = usePersonaStore()
 
 const appVersion = `v${manifest.versionName || '1.0.0'}`
 
-const useCloudProxy = ref(uni.getStorageSync('use_cloud_proxy') === true)
-const gatewayUrl = ref(uni.getStorageSync('cloud_gateway_url') || '')
-const gatewayToken = ref(uni.getStorageSync('cloud_gateway_token') || '')
+const useCloudProxy = ref(readStorage(STORAGE_KEYS.useCloudProxy) === true)
+const gatewayUrl = ref((readStorage<string>(STORAGE_KEYS.cloudGatewayUrl) as string) || '')
+const gatewayToken = ref((readStorage<string>(STORAGE_KEYS.cloudGatewayToken) as string) || '')
 
 function toggleCloudProxy(e: Event) {
   const detail = (e as unknown as { detail?: { value?: boolean } }).detail
   useCloudProxy.value = detail?.value ?? !useCloudProxy.value
-  uni.setStorageSync('use_cloud_proxy', useCloudProxy.value)
+  writeStorage(STORAGE_KEYS.useCloudProxy, useCloudProxy.value)
   uni.showToast({
     title: useCloudProxy.value ? '已启用云端网关' : '已关闭云端网关',
     icon: 'none'
@@ -131,7 +132,7 @@ function toggleCloudProxy(e: Event) {
 }
 
 function saveGatewayUrl() {
-  uni.setStorageSync('cloud_gateway_url', gatewayUrl.value.trim())
+  writeStorage(STORAGE_KEYS.cloudGatewayUrl, gatewayUrl.value.trim())
   uni.showToast({
     title: '网关地址已保存',
     icon: 'none'
@@ -139,7 +140,7 @@ function saveGatewayUrl() {
 }
 
 function saveGatewayToken() {
-  uni.setStorageSync('cloud_gateway_token', gatewayToken.value.trim())
+  writeStorage(STORAGE_KEYS.cloudGatewayToken, gatewayToken.value.trim())
   uni.showToast({
     title: '网关令牌已保存',
     icon: 'none'
@@ -274,14 +275,38 @@ function clearData() {
 }
 
 function goToMbti() {
-  uni.navigateTo({
-    url: '/pages/mbti-test/index'
+  if (!personaStore.isTestCompleted) {
+    uni.navigateTo({ url: '/pages/mbti-test/index' })
+    return
+  }
+  uni.showModal({
+    title: '重新测试MBTI',
+    content: '将清空当前 MBTI 测评结果与答案，已创建的人格不受影响。确定继续吗？',
+    confirmText: '重新测试',
+    cancelText: '取消',
+    success: (res) => {
+      if (!res.confirm) return
+      personaStore.resetMbtiTest()
+      uni.navigateTo({ url: '/pages/mbti-test/index' })
+    }
   })
 }
 
 function goToBigFive() {
-  uni.navigateTo({
-    url: '/pages/mbti-test/index?mode=bigfive'
+  if (!personaStore.isBigFiveTestCompleted) {
+    uni.navigateTo({ url: '/pages/mbti-test/index?mode=bigfive' })
+    return
+  }
+  uni.showModal({
+    title: '重新测试大五人格',
+    content: '将清空当前大五测评结果与答案，已创建的人格不受影响。确定继续吗？',
+    confirmText: '重新测试',
+    cancelText: '取消',
+    success: (res) => {
+      if (!res.confirm) return
+      personaStore.resetBigFiveTest()
+      uni.navigateTo({ url: '/pages/mbti-test/index?mode=bigfive' })
+    }
   })
 }
 

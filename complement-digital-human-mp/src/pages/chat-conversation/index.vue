@@ -158,6 +158,7 @@ import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { usePersonaStore, type MemoryFact } from '../../stores/persona'
 import { createSession, ensureSessions, getMessagesKey, touchSession } from '../../utils/chatSessions'
+import { readStorage, writeStorage, STORAGE_KEYS } from '../../utils/storage'
 import { callDeepSeekAPI } from './modules/api'
 import { generateMockResponse } from './modules/mock'
 import type { PromptContext } from './modules/prompt'
@@ -223,9 +224,9 @@ onLoad((options) => {
 })
 
 function loadApiSettings() {
-  const savedKey = uni.getStorageSync('deepseek_api_key')
-  const savedUseDeepSeek = uni.getStorageSync('use_deepseek')
-  
+  const savedKey = readStorage<string>(STORAGE_KEYS.deepseekApiKey)
+  const savedUseDeepSeek = readStorage(STORAGE_KEYS.useDeepSeek)
+
   if (savedKey) {
     apiKey.value = savedKey
     useDeepSeek.value = savedUseDeepSeek === true
@@ -234,12 +235,11 @@ function loadApiSettings() {
 
 function loadMessages() {
   const storageKey = getStorageKey()
-  const savedMessages = uni.getStorageSync(storageKey)
-  
-  if (savedMessages) {
+  const savedMessages = readStorage<Array<{ id: string; role: 'user' | 'assistant'; content: string; timestamp: string; structured?: StructuredReply }>>(storageKey)
+
+  if (Array.isArray(savedMessages)) {
     try {
-      const parsed = JSON.parse(savedMessages) as Array<{ id: string; role: 'user' | 'assistant'; content: string; timestamp: string; structured?: StructuredReply }>
-      messages.value = parsed.map((msg) => ({
+      messages.value = savedMessages.map((msg) => ({
         ...msg,
         timestamp: new Date(msg.timestamp)
       }))
@@ -261,7 +261,7 @@ function saveMessages() {
       ...msg,
       timestamp: msg.timestamp.toISOString()
     }))
-    uni.setStorageSync(storageKey, JSON.stringify(dataToSave))
+    writeStorage(storageKey, dataToSave)
     const persona = personaStore.activePersona
     if (persona && sessionId.value) {
       touchSession(persona.id, sessionId.value, dataToSave)
@@ -288,8 +288,8 @@ function saveApiKey() {
     return
   }
   
-  uni.setStorageSync('deepseek_api_key', apiKey.value.trim())
-  uni.setStorageSync('use_deepseek', useDeepSeek.value)
+  writeStorage(STORAGE_KEYS.deepseekApiKey, apiKey.value.trim())
+  writeStorage(STORAGE_KEYS.useDeepSeek, useDeepSeek.value)
   showApiKeyModal.value = false
   uni.showToast({
     title: '设置已保存',
@@ -328,8 +328,8 @@ async function handleSend() {
   try {
     let response: ChatResponse
     
-    const gatewayUrl = uni.getStorageSync('cloud_gateway_url')
-    const useProxy = uni.getStorageSync('use_cloud_proxy') === true
+    const gatewayUrl = readStorage<string>(STORAGE_KEYS.cloudGatewayUrl)
+    const useProxy = readStorage(STORAGE_KEYS.useCloudProxy) === true
     if ((useDeepSeek.value && apiKey.value) || (useProxy && gatewayUrl)) {
       const ctx: PromptContext = {
         persona: personaStore.activePersona,
