@@ -1,5 +1,6 @@
 import type { ChatSessionMeta } from './chatSessions'
 import { getSessionsKey, getMessagesKey } from './chatSessions'
+import { getStorageKeys, readStorage, removeStorage, writeStorage, STORAGE_KEYS } from './storage'
 
 const APP_MARKER = 'complement-digital-human'
 
@@ -10,56 +11,8 @@ interface BackupData {
   settings?: { use_cloud_proxy?: unknown; cloud_gateway_url?: unknown }
 }
 
-function readStorage<T>(key: string): T | null {
-  try {
-    const raw = uni.getStorageSync(key)
-    if (raw === '' || raw === null || raw === undefined) return null
-    if (typeof raw !== 'string') return raw as T
-    try {
-      return JSON.parse(raw) as T
-    } catch (e) {
-      return raw as T
-    }
-  } catch (e) {
-    return null
-  }
-}
-
-function writeStorage(key: string, value: unknown): void {
-  try {
-    uni.setStorageSync(key, value)
-  } catch (e) {
-    try {
-      localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value))
-    } catch (e2) {
-      console.error('写入存储失败:', e2)
-    }
-  }
-}
-
-function removeStorage(key: string): void {
-  try {
-    uni.removeStorageSync(key)
-  } catch (e) {
-    try {
-      localStorage.removeItem(key)
-    } catch (e2) {
-      console.error('删除存储失败:', e2)
-    }
-  }
-}
-
-function getStorageKeys(): string[] {
-  try {
-    const info = uni.getStorageInfoSync()
-    return Array.isArray(info.keys) ? info.keys : []
-  } catch (e) {
-    return []
-  }
-}
-
 export function buildBackupJson(): string {
-  const personaData = readStorage('persona_data')
+  const personaData = readStorage(STORAGE_KEYS.personaData)
   const sessions: Record<string, ChatSessionMeta[]> = {}
   const messages: Record<string, Record<string, unknown[]>> = {}
   getStorageKeys().forEach(key => {
@@ -84,8 +37,8 @@ export function buildBackupJson(): string {
       sessions,
       messages,
       settings: {
-        use_cloud_proxy: readStorage('use_cloud_proxy') === true,
-        cloud_gateway_url: readStorage('cloud_gateway_url') || '',
+        use_cloud_proxy: readStorage(STORAGE_KEYS.useCloudProxy) === true,
+        cloud_gateway_url: readStorage(STORAGE_KEYS.cloudGatewayUrl) || '',
       },
     },
   }
@@ -105,11 +58,11 @@ export function importBackupJson(jsonText: string): { ok: boolean; msg: string }
   const data = parsed.data
 
   getStorageKeys().forEach(key => {
-    if (key.startsWith('chat_') || key === 'persona_data') removeStorage(key)
+    if (key.startsWith('chat_') || key === STORAGE_KEYS.personaData) removeStorage(key)
   })
 
   if (data.persona_data && typeof data.persona_data === 'object') {
-    writeStorage('persona_data', JSON.stringify(data.persona_data))
+    writeStorage(STORAGE_KEYS.personaData, JSON.stringify(data.persona_data))
   }
 
   const sessions = data.sessions || {}
@@ -132,14 +85,14 @@ export function importBackupJson(jsonText: string): { ok: boolean; msg: string }
 
   const settings = data.settings || {}
   if (settings.use_cloud_proxy === true) {
-    writeStorage('use_cloud_proxy', true)
+    writeStorage(STORAGE_KEYS.useCloudProxy, true)
   } else {
-    removeStorage('use_cloud_proxy')
+    removeStorage(STORAGE_KEYS.useCloudProxy)
   }
   if (typeof settings.cloud_gateway_url === 'string' && settings.cloud_gateway_url) {
-    writeStorage('cloud_gateway_url', settings.cloud_gateway_url)
+    writeStorage(STORAGE_KEYS.cloudGatewayUrl, settings.cloud_gateway_url)
   } else {
-    removeStorage('cloud_gateway_url')
+    removeStorage(STORAGE_KEYS.cloudGatewayUrl)
   }
 
   return { ok: true, msg: '导入成功' }

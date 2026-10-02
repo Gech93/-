@@ -100,7 +100,8 @@ describe('chatSessions 旧版单会话迁移', () => {
     expect(sessions[0].preview).toBe('你好，我是互补数字人')
     expect(uni.getStorageSync('chat_messages_p1')).toBe('')
     const migrated = uni.getStorageSync('chat_messages_p1_legacy')
-    expect(migrated).toContain('互补数字人')
+    expect(Array.isArray(migrated)).toBe(true)
+    expect(JSON.stringify(migrated)).toContain('互补数字人')
   })
 
   it('已有会话时不再触发迁移', () => {

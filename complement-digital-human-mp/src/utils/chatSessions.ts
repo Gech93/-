@@ -1,3 +1,5 @@
+import { readStorage, removeStorage, writeStorage } from './storage'
+
 export interface ChatSessionMeta {
   id: string
   title: string
@@ -26,35 +28,13 @@ interface SessionMessage {
   structured?: { perspective?: string }
 }
 
-function readJson<T>(key: string): T | null {
-  try {
-    const raw = uni.getStorageSync(key)
-    if (!raw) return null
-    return (typeof raw === 'string' ? JSON.parse(raw) : raw) as T
-  } catch (e) {
-    return null
-  }
-}
-
-function writeJson(key: string, value: unknown): void {
-  try {
-    uni.setStorageSync(key, JSON.stringify(value))
-  } catch (e) {
-    try {
-      localStorage.setItem(key, JSON.stringify(value))
-    } catch (e2) {
-      console.error('保存失败:', e2)
-    }
-  }
-}
-
 export function loadSessions(personaId: string): ChatSessionMeta[] {
-  const list = readJson<ChatSessionMeta[]>(getSessionsKey(personaId))
+  const list = readStorage<ChatSessionMeta[]>(getSessionsKey(personaId))
   return Array.isArray(list) ? list : []
 }
 
 export function saveSessions(personaId: string, sessions: ChatSessionMeta[]): void {
-  writeJson(getSessionsKey(personaId), sessions)
+  writeStorage(getSessionsKey(personaId), sessions)
 }
 
 export function ensureSessions(personaId: string): ChatSessionMeta[] {
@@ -62,7 +42,7 @@ export function ensureSessions(personaId: string): ChatSessionMeta[] {
   if (sessions.length) return sessions
 
   const legacyKey = `chat_messages_${personaId}`
-  const legacy = readJson<LegacyMessage[]>(legacyKey)
+  const legacy = readStorage<LegacyMessage[]>(legacyKey)
   if (Array.isArray(legacy) && legacy.length) {
     const id = 'legacy'
     const firstUser = legacy.find((m: LegacyMessage) => m.role === 'user')
@@ -76,16 +56,8 @@ export function ensureSessions(personaId: string): ChatSessionMeta[] {
       preview: lastMessage && lastMessage.content ? lastMessage.content.slice(0, 30) : '',
     }
     saveSessions(personaId, [session])
-    try {
-      uni.setStorageSync(getMessagesKey(personaId, id), JSON.stringify(legacy.filter(Boolean)))
-    } catch (e) {
-      console.error('迁移旧会话失败:', e)
-    }
-    try {
-      uni.removeStorageSync(legacyKey)
-    } catch (e) {
-      console.error('清理旧会话失败:', e)
-    }
+    writeStorage(getMessagesKey(personaId, id), legacy.filter(Boolean))
+    removeStorage(legacyKey)
     return [session]
   }
   return []
@@ -128,13 +100,5 @@ export function removeSession(personaId: string, sessionId: string): void {
     personaId,
     sessions.filter(s => s.id !== sessionId)
   )
-  try {
-    uni.removeStorageSync(getMessagesKey(personaId, sessionId))
-  } catch (e) {
-    try {
-      localStorage.removeItem(getMessagesKey(personaId, sessionId))
-    } catch (e2) {
-      console.error('删除会话失败:', e2)
-    }
-  }
+  removeStorage(getMessagesKey(personaId, sessionId))
 }

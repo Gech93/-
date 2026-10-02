@@ -1,5 +1,6 @@
 import { ref, computed, reactive } from 'vue'
 import { bigFiveQuestions, defaultCommunicationStyle, FEEDBACK_MIN_STRENGTH, mbtiQuestions, suggestedTypes } from './types'
+import { readStorage, writeStorage, STORAGE_KEYS } from '../../utils/storage'
 import type {
   BehaviorProfile,
   BigFiveProfile,
@@ -28,6 +29,16 @@ export * from './types'
 export * from './algo'
 export * from './memory'
 
+const MAX_PERSONA_COUNT = 5
+const MAX_USER_FACTS = 12
+const MAX_MEMORY_FACTS = 50
+const MAX_IMPORTANCE = 5
+const MAX_GROWTH_LEVEL = 10
+const CONVERSATIONS_PER_LEVEL = 10
+const COMPLEMENT_COOLDOWN_DAYS = 30
+const DAY_MS = 24 * 60 * 60 * 1000
+const COMPLEMENT_COOLDOWN_MS = COMPLEMENT_COOLDOWN_DAYS * DAY_MS
+
 function createStore() {
   const userMbti = ref<string | null>(null)
   const mbtiProfile = ref<MbtiProfile | null>(null)
@@ -46,7 +57,7 @@ function createStore() {
   })
 
   const canCreateMore = computed(() => {
-    return personas.value.length < 5
+    return personas.value.length < MAX_PERSONA_COUNT
   })
 
   const personaCount = computed(() => personas.value.length)
@@ -147,7 +158,7 @@ function createStore() {
   function createPersona(name: string, suggested?: typeof suggestedTypes[0], complementLevel = 50) {
     if (!canCreateMore.value) {
       try {
-        uni.showToast({ title: '已达到最大人格数量（5个）', icon: 'none' })
+        uni.showToast({ title: `已达到最大人格数量（${MAX_PERSONA_COUNT}个）`, icon: 'none' })
       } catch (e) {
         console.log('提示：已达到最大人格数量')
       }
@@ -174,7 +185,7 @@ function createStore() {
     const bfScores: BigFiveScores = bigFiveProfile.value?.scores || { O: 50, C: 50, E: 50, A: 50, N: 50 }
 
     const newPersona: Persona = {
-      id: Date.now().toString(),
+      id: `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       name,
       mbtiType: profile.type,
       complementMbti: calculateComplementMbti(profile.type, complementLevel, profile.scores),
@@ -228,7 +239,7 @@ function createStore() {
       return false
     }
 
-    const nextMonth = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+    const nextMonth = new Date(now.getTime() + COMPLEMENT_COOLDOWN_MS)
     persona.complementLevel = level
     persona.complementMbti = calculateComplementMbti(persona.mbtiType, level, persona.mbtiScores)
     persona.complementBigFive = calculateComplementBigFive(
@@ -263,7 +274,7 @@ function createStore() {
   function getRemainDays(persona: Persona): number {
     const now = new Date()
     const nextModify = new Date(persona.nextModifyTime)
-    return Math.max(0, Math.ceil((nextModify.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)))
+    return Math.max(0, Math.ceil((nextModify.getTime() - now.getTime()) / DAY_MS))
   }
 
   function addUserFact(fact: string) {
@@ -274,7 +285,7 @@ function createStore() {
     const facts = persona.memory.userFacts
     if (!facts.includes(trimmed)) {
       facts.push(trimmed)
-      if (facts.length > 12) facts.shift()
+      if (facts.length > MAX_USER_FACTS) facts.shift()
       saveToStorage()
     }
   }
@@ -283,7 +294,7 @@ function createStore() {
     const persona = activePersona.value
     if (!persona) return
     persona.totalConversations += 1
-    persona.growthLevel = Math.min(10, 1 + Math.floor(persona.totalConversations / 10))
+    persona.growthLevel = Math.min(MAX_GROWTH_LEVEL, 1 + Math.floor(persona.totalConversations / CONVERSATIONS_PER_LEVEL))
     saveToStorage()
   }
 
@@ -296,7 +307,7 @@ function createStore() {
     const now = new Date().toISOString()
     const existing = persona.memory.facts.find(f => f.content === trimmed)
     if (existing) {
-      existing.importance = Math.min(5, existing.importance + 1)
+      existing.importance = Math.min(MAX_IMPORTANCE, existing.importance + 1)
       existing.lastAt = now
     } else {
       persona.memory.facts.push({
@@ -308,7 +319,7 @@ function createStore() {
         createdAt: now,
         lastAt: now,
       })
-      if (persona.memory.facts.length > 50) persona.memory.facts.shift()
+      if (persona.memory.facts.length > MAX_MEMORY_FACTS) persona.memory.facts.shift()
     }
     saveToStorage()
   }
@@ -376,59 +387,32 @@ function createStore() {
         isBigFiveTestCompleted: isBigFiveTestCompleted.value,
         bigFiveAnswers: bigFiveAnswers.value,
       }
-      try {
-        uni.setStorageSync('persona_data', JSON.stringify(data))
-      } catch (e) {
-        // H5 环境下使用 localStorage
-        try {
-          localStorage.setItem('persona_data', JSON.stringify(data))
-        } catch (e2) {
-          console.error('保存数据失败:', e2)
-        }
-      }
+      writeStorage(STORAGE_KEYS.personaData, data)
     } catch (error) {
       console.error('保存数据失败:', error)
     }
   }
 
   function loadFromStorage() {
-    try {
-      let dataStr: string | null = null
-      try {
-        dataStr = uni.getStorageSync('persona_data')
-      } catch (e) {
-        // H5 环境下使用 localStorage
-        try {
-          dataStr = localStorage.getItem('persona_data')
-        } catch (e2) {
-          console.log('无法获取存储数据')
-        }
-      }
+    const data = readStorage<Record<string, unknown> | null>(STORAGE_KEYS.personaData)
+    if (!data || typeof data !== 'object') return
 
-      if (dataStr) {
-        const data = JSON.parse(dataStr)
-        userMbti.value = data.userMbti || null
-        mbtiProfile.value = data.mbtiProfile || null
-        bigFiveProfile.value = data.bigFiveProfile || null
-        personas.value = (data.personas || []).map(normalizePersona)
-        activePersonaId.value = data.activePersonaId || null
-        isTestCompleted.value = data.isTestCompleted || false
-        answers.value = data.answers || {}
-        isBigFiveTestCompleted.value = data.isBigFiveTestCompleted || false
-        bigFiveAnswers.value = data.bigFiveAnswers || {}
-      }
-    } catch (error) {
-      console.error('加载数据失败:', error)
-      userMbti.value = null
-      mbtiProfile.value = null
-      bigFiveProfile.value = null
-      personas.value = []
-      activePersonaId.value = null
-      isTestCompleted.value = false
-      answers.value = {}
-      isBigFiveTestCompleted.value = false
-      bigFiveAnswers.value = {}
-    }
+    userMbti.value = typeof data.userMbti === 'string' ? data.userMbti : null
+    mbtiProfile.value =
+      data.mbtiProfile && typeof data.mbtiProfile === 'object' ? (data.mbtiProfile as MbtiProfile) : null
+    bigFiveProfile.value =
+      data.bigFiveProfile && typeof data.bigFiveProfile === 'object'
+        ? (data.bigFiveProfile as BigFiveProfile)
+        : null
+    personas.value = Array.isArray(data.personas) ? (data.personas as Partial<Persona>[]).map(normalizePersona) : []
+    activePersonaId.value = typeof data.activePersonaId === 'string' ? data.activePersonaId : null
+    isTestCompleted.value = data.isTestCompleted === true
+    answers.value = data.answers && typeof data.answers === 'object' ? (data.answers as Record<number, number>) : {}
+    isBigFiveTestCompleted.value = data.isBigFiveTestCompleted === true
+    bigFiveAnswers.value =
+      data.bigFiveAnswers && typeof data.bigFiveAnswers === 'object'
+        ? (data.bigFiveAnswers as Record<number, number>)
+        : {}
   }
 
   function resetTest() {
@@ -441,6 +425,7 @@ function createStore() {
     bigFiveAnswers.value = {}
     isBigFiveTestCompleted.value = false
     bigFiveProfile.value = null
+    saveToStorage()
   }
 
   return reactive({
