@@ -757,7 +757,7 @@ function handleStart() {
 }
 
 .mirror-3 .mirror-frame {
-  background: linear-gradient(150deg, #a7f3d0 0%, #34d399 55%, #059669 100%);
+  background: linear-gradient(150deg, #93c5fd 0%, #60a5fa 55%, #2563eb 100%);
   animation-delay: 0.6s;
 }
 
@@ -794,7 +794,7 @@ function handleStart() {
 }
 
 .mirror-3 .mirror-glass {
-  background: linear-gradient(170deg, #ecfdf5 0%, #d1fae5 60%, #a7f3d0 100%);
+  background: linear-gradient(170deg, #eff6ff 0%, #dbeafe 60%, #bfdbfe 100%);
 }
 
 .mirror-base {
@@ -893,7 +893,7 @@ function handleStart() {
 }
 
 .mirror-3 .rm-mochi {
-  background: linear-gradient(160deg, #f0fdfa 0%, #ccfbf1 55%, #99f6e4 100%);
+  background: linear-gradient(160deg, #f0f7ff 0%, #dbeafe 55%, #93c5fd 100%);
 }
 
 /* 布丁反射：杯体 + 侧面轮廓 */
@@ -915,7 +915,7 @@ function handleStart() {
 }
 
 .mirror-3 .rm-pudding {
-  background: linear-gradient(160deg, #f0fdfa 0%, #ccfbf1 55%, #99f6e4 100%);
+  background: linear-gradient(160deg, #f0f7ff 0%, #dbeafe 55%, #93c5fd 100%);
 }
 
 /* 水母反射：半透明伞盖（触手单独绘制） */
@@ -943,8 +943,8 @@ function handleStart() {
 }
 
 .mirror-3 .rm-jellyfish {
-  background: linear-gradient(170deg, rgba(240, 253, 250, 0.8) 0%,
-      rgba(153, 246, 228, 0.82) 55%, rgba(45, 212, 191, 0.88) 100%);
+  background: linear-gradient(170deg, rgba(239, 246, 255, 0.8) 0%,
+      rgba(147, 197, 253, 0.82) 55%, rgba(59, 130, 246, 0.88) 100%);
 }
 
 /* 反射：团子奶油顶 */
@@ -990,7 +990,7 @@ function handleStart() {
 .mirror-3 .reflection-cream,
 .mirror-3 .reflection-cream::before,
 .mirror-3 .reflection-cream::after {
-  background: linear-gradient(180deg, #99f6e4 0%, #14b8a6 100%);
+  background: linear-gradient(180deg, #93c5fd 0%, #3b82f6 100%);
 }
 
 /* 反射：布丁焦糖层 + 樱桃 */
@@ -1060,7 +1060,7 @@ function handleStart() {
 }
 
 .mirror-3 .reflection-tentacle {
-  background: linear-gradient(180deg, rgba(94, 234, 212, 0.5), rgba(20, 184, 166, 0.75));
+  background: linear-gradient(180deg, rgba(96, 165, 250, 0.5), rgba(37, 99, 235, 0.75));
 }
 
 .reflection-tentacle::after {
@@ -1080,7 +1080,7 @@ function handleStart() {
 }
 
 .mirror-3 .reflection-tentacle::after {
-  background: rgba(20, 184, 166, 0.78);
+  background: rgba(59, 130, 246, 0.78);
 }
 
 .rt-1 {
@@ -1176,12 +1176,12 @@ function handleStart() {
 }
 
 .mirror-1 .reflection-mouth {
-  width: 18rpx;
-  height: 3rpx;
-  bottom: 27%;
-  border: none;
-  background: var(--dopamine-text);
-  border-radius: 0;
+  width: 14rpx;
+  height: 5rpx;
+  bottom: 25%;
+  border: 3rpx solid var(--dopamine-text);
+  border-top: none;
+  border-radius: 0 0 12rpx 12rpx;
 }
 
 .mirror-2 .reflection-mouth {
