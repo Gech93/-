@@ -385,40 +385,41 @@ function handleStart() {
 
 .mochi-cream {
   position: absolute;
-  top: 0;
+  top: 4rpx;
   left: 50%;
   transform: translateX(-50%);
-  width: 136rpx;
-  height: 86rpx;
+  width: 128rpx;
+  height: 50rpx;
   z-index: 2;
-  border-radius: 50% 50% 44% 44% / 62% 62% 38% 38%;
+  border-radius: 50% 50% 46% 46% / 60% 60% 40% 40%;
   background: linear-gradient(180deg, #ff9dc4 0%, #f55c92 100%);
-  box-shadow: inset 0 -10rpx 16rpx rgba(255, 255, 255, 0.25),
+  box-shadow: inset 0 6rpx 12rpx rgba(255, 255, 255, 0.35),
+    inset 0 -8rpx 14rpx rgba(255, 255, 255, 0.25),
     0 8rpx 16rpx rgba(245, 92, 146, 0.25);
 }
 
 .mochi-cream::before {
   content: '';
   position: absolute;
-  top: -10rpx;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 48rpx;
-  height: 34rpx;
-  border-radius: 50% 50% 44% 44% / 64% 64% 36% 36%;
+  top: -16rpx;
+  left: 2rpx;
+  width: 42rpx;
+  height: 42rpx;
+  border-radius: 50% 50% 46% 46% / 60% 60% 40% 40%;
   background: linear-gradient(180deg, #ff9dc4 0%, #f55c92 100%);
+  box-shadow: inset 0 4rpx 8rpx rgba(255, 255, 255, 0.3);
 }
 
 .mochi-cream::after {
   content: '';
   position: absolute;
-  top: 16rpx;
-  left: 16rpx;
-  width: 40rpx;
-  height: 18rpx;
-  background: rgba(255, 255, 255, 0.65);
-  border-radius: 50%;
-  transform: rotate(-15deg);
+  top: -16rpx;
+  right: 2rpx;
+  width: 42rpx;
+  height: 42rpx;
+  border-radius: 50% 50% 46% 46% / 60% 60% 40% 40%;
+  background: linear-gradient(180deg, #ff9dc4 0%, #f55c92 100%);
+  box-shadow: inset 0 4rpx 8rpx rgba(255, 255, 255, 0.3);
 }
 
 /* ===== 形象二：果冻布丁 ===== */
@@ -1147,9 +1148,11 @@ function handleStart() {
 }
 
 .mirror-2 .reflection-mouth {
-  border-radius: 8rpx 8rpx 0 0;
+  width: 20rpx;
+  height: 10rpx;
+  border-radius: 0 0 22rpx 22rpx;
   border: 3rpx solid var(--dopamine-text);
-  border-bottom: none;
+  border-top: none;
 }
 
 .reflection-gloss {
