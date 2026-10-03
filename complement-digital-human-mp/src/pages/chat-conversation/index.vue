@@ -114,40 +114,23 @@
       </view>
     </view>
 
-    <!-- API Key 设置弹窗 -->
+    <!-- AI 服务配置弹窗 -->
     <view class="modal-overlay" v-if="showApiKeyModal" @click="showApiKeyModal = false">
       <view class="modal-content" @click.stop>
-        <text class="modal-title">设置 DeepSeek API Key</text>
+        <text class="modal-title">AI 服务配置</text>
         
         <view class="form-group">
-          <text class="form-label">API Key</text>
-          <input
-            v-model="apiKey"
-            class="form-input"
-            placeholder="输入你的 DeepSeek API Key"
-            password
-          />
-          <text class="form-hint">从 DeepSeek 平台获取 API Key</text>
-          <text class="form-hint warning">风险提示：直连模式会在本机明文保存你的 API Key 并随请求传输，存在被采集滥用风险；建议优先使用设置页的「云端网关 + 网关令牌」方式</text>
+          <text class="form-hint" v-if="aiReady">当前已配置可用的 AI 服务，对话将由真实模型回复；配置多个模型时，某个模型不流畅会自动切换下一个。</text>
+          <text class="form-hint" v-else>尚未配置可用的 AI 服务，当前对话使用演示回复。请在设置页添加模型（DeepSeek / GLM / Kimi / OpenAI 等）或启用云端网关。</text>
         </view>
 
-        <view class="form-group">
-          <checkbox-group @change="toggleDeepSeek">
-            <label>
-              <checkbox :checked="useDeepSeek" />
-              <text> 启用 DeepSeek AI</text>
-            </label>
-          </checkbox-group>
+        <view class="api-info">
+          <text>模型列表管理位于：设置 → AI 服务</text>
         </view>
 
         <view class="modal-actions">
           <button class="btn btn-cancel" @click="showApiKeyModal = false">取消</button>
-          <button class="btn btn-save" @click="saveApiKey">保存</button>
-        </view>
-
-        <view class="api-info">
-          <text>获取 API Key：</text>
-          <text>1. 访问 DeepSeek 开放平台\n2. 注册并登录账号\n3. 创建 API Key 并复制</text>
+          <button class="btn btn-save" @click="goSettings">前往设置</button>
         </view>
       </view>
     </view>
@@ -159,7 +142,8 @@ import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { usePersonaStore, type MemoryFact } from '../../stores/persona'
 import { createSession, ensureSessions, getMessagesKey, touchSession } from '../../utils/chatSessions'
-import { readStorage, writeStorage, STORAGE_KEYS } from '../../utils/storage'
+import { readStorage, writeStorage } from '../../utils/storage'
+import { hasUsableAi } from './modules/models'
 import { callDeepSeekAPI } from './modules/api'
 import { generateMockResponse } from './modules/mock'
 import type { PromptContext } from './modules/prompt'
@@ -184,8 +168,7 @@ const personaName = ref('数字人')
 const personaMbti = ref('AI')
 
 const showApiKeyModal = ref(false)
-const apiKey = ref('')
-const useDeepSeek = ref(false)
+const aiReady = ref(false)
 const remainDays = ref(0)
 
 const getStorageKey = () => {
@@ -225,13 +208,7 @@ onLoad((options) => {
 })
 
 function loadApiSettings() {
-  const savedKey = readStorage<string>(STORAGE_KEYS.deepseekApiKey)
-  const savedUseDeepSeek = readStorage(STORAGE_KEYS.useDeepSeek)
-
-  if (savedKey) {
-    apiKey.value = savedKey
-    useDeepSeek.value = savedUseDeepSeek === true
-  }
+  aiReady.value = hasUsableAi(readStorage)
 }
 
 function loadMessages() {
@@ -273,29 +250,13 @@ function saveMessages() {
 }
 
 function showSettings() {
+  aiReady.value = hasUsableAi(readStorage)
   showApiKeyModal.value = true
 }
 
-function toggleDeepSeek(e: { detail: { value: boolean[] } }) {
-  useDeepSeek.value = e.detail.value.length > 0
-}
-
-function saveApiKey() {
-  if (!apiKey.value.trim()) {
-    uni.showToast({
-      title: '请输入 API Key',
-      icon: 'none'
-    })
-    return
-  }
-  
-  writeStorage(STORAGE_KEYS.deepseekApiKey, apiKey.value.trim())
-  writeStorage(STORAGE_KEYS.useDeepSeek, useDeepSeek.value)
+function goSettings() {
   showApiKeyModal.value = false
-  uni.showToast({
-    title: '设置已保存',
-    icon: 'success'
-  })
+  uni.navigateTo({ url: '/pages/settings/index' })
 }
 
 function formatTime(date: Date | string): string {
@@ -329,9 +290,7 @@ async function handleSend() {
   try {
     let response: ChatResponse
     
-    const gatewayUrl = readStorage<string>(STORAGE_KEYS.cloudGatewayUrl)
-    const useProxy = readStorage(STORAGE_KEYS.useCloudProxy) === true
-    if ((useDeepSeek.value && apiKey.value) || (useProxy && gatewayUrl)) {
+    if (aiReady.value) {
       const ctx: PromptContext = {
         persona: personaStore.activePersona,
         userMbti: personaStore.userMbti,

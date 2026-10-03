@@ -8,7 +8,7 @@ interface BackupData {
   persona_data?: unknown
   sessions?: Record<string, unknown>
   messages?: Record<string, Record<string, unknown>>
-  settings?: { use_cloud_proxy?: unknown; cloud_gateway_url?: unknown }
+  settings?: { use_cloud_proxy?: unknown; cloud_gateway_url?: unknown; cloud_gateway_token?: unknown; ai_models?: unknown }
 }
 
 export function buildBackupJson(): string {
@@ -39,6 +39,8 @@ export function buildBackupJson(): string {
       settings: {
         use_cloud_proxy: readStorage(STORAGE_KEYS.useCloudProxy) === true,
         cloud_gateway_url: readStorage(STORAGE_KEYS.cloudGatewayUrl) || '',
+        cloud_gateway_token: readStorage(STORAGE_KEYS.cloudGatewayToken) || '',
+        ai_models: readStorage(STORAGE_KEYS.aiModels) || null,
       },
     },
   }
@@ -93,6 +95,16 @@ export function importBackupJson(jsonText: string): { ok: boolean; msg: string }
     writeStorage(STORAGE_KEYS.cloudGatewayUrl, settings.cloud_gateway_url)
   } else {
     removeStorage(STORAGE_KEYS.cloudGatewayUrl)
+  }
+  if (typeof settings.cloud_gateway_token === 'string' && settings.cloud_gateway_token) {
+    writeStorage(STORAGE_KEYS.cloudGatewayToken, settings.cloud_gateway_token)
+  } else {
+    removeStorage(STORAGE_KEYS.cloudGatewayToken)
+  }
+  if (Array.isArray(settings.ai_models)) {
+    writeStorage(STORAGE_KEYS.aiModels, settings.ai_models)
+  } else {
+    removeStorage(STORAGE_KEYS.aiModels)
   }
 
   return { ok: true, msg: '导入成功' }

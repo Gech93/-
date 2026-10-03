@@ -1,6 +1,14 @@
 import { buildSystemPrompt, buildStructuredInstruction, type PromptContext } from './prompt'
-import { formatStructuredText, parseStructuredReply, type ChatResponse } from './structured'
-import { getModelOption, isCustomModel, CUSTOM_MODEL_ID } from './models'
+import { formatStructuredText, parseStructuredReply, type ChatResponse, type StructuredReply } from './structured'
+import {
+  readGatewayConfig,
+  readModels,
+  resolveProvider,
+  supportsJsonMode,
+  usableModels,
+  type GatewayConfig,
+  type UserModelConfig,
+} from './models'
 
 export interface ChatCompletionData {
   choices?: Array<{ message?: { content?: string } }>
@@ -37,12 +45,6 @@ export interface CallDeepSeekParams {
   deps?: ApiDeps
 }
 
-// ===== 开发者内置网关配置（开箱即用）=====
-// 部署 chat-gateway 云函数后，将地址与令牌填入此处，用户无需任何配置即可使用 AI
-// 留空则回退到用户自行配置的 API Key 模式
-const BUILTIN_GATEWAY_URL = '' // 例: 'https://xxx.next.bspapp.com/chat-gateway'
-const BUILTIN_GATEWAY_TOKEN = '' // 与云函数环境变量 CHAT_GATEWAY_TOKEN 保持一致
-
 const defaultDeps: ApiDeps = {
   request: (options) =>
     uni.request({
@@ -53,6 +55,93 @@ const defaultDeps: ApiDeps = {
       timeout: options.timeout,
     }) as unknown as Promise<RequestResult>,
   getStorage: (key) => uni.getStorageSync(key),
+}
+
+// 格式异常判定：结构化解析发生降级（JSON 解析失败或 perspective 缺失），返回的是原文透传
+function isFormatFailure(content: string, structured: StructuredReply): boolean {
+  return structured.perspective === content
+}
+
+function directRequest(
+  deps: ApiDeps,
+  model: UserModelConfig,
+  messages: Array<{ role: string; content: string }>
+): Promise<ChatResponse | null> {
+  const jsonMode = model.jsonMode && supportsJsonMode(model.model)
+  return deps
+    .request({
+      url: model.baseUrl,
+      method: 'POST',
+      header: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${model.apiKey}`,
+      },
+      data: {
+        model: model.model,
+        messages,
+        stream: false,
+        ...(jsonMode ? { response_format: { type: 'json_object' } } : {}),
+      },
+      timeout: 30000,
+    })
+    .then((res) => {
+      if (res.statusCode !== 200) {
+        console.warn(`[failover] 直连 ${model.name}(${model.model}) 失败: HTTP ${res.statusCode}`)
+        return null
+      }
+      const body = res.data as ChatCompletionData
+      const content = body.choices?.[0]?.message?.content ?? ''
+      const structured = parseStructuredReply(content)
+      if (isFormatFailure(content, structured)) {
+        console.warn(`[failover] 直连 ${model.name}(${model.model}) 返回内容无法解析为结构化回复，切换下一个`)
+        return null
+      }
+      return { text: formatStructuredText(structured), structured, memoryUpdates: structured.memoryUpdates }
+    })
+    .catch((e) => {
+      console.warn(`[failover] 直连 ${model.name}(${model.model}) 异常:`, e)
+      return null
+    })
+}
+
+function gatewayRequest(
+  deps: ApiDeps,
+  gateway: GatewayConfig,
+  primary: UserModelConfig | undefined,
+  messages: Array<{ role: string; content: string }>
+): Promise<ChatResponse | null> {
+  const model = primary ? primary.model : 'deepseek-chat'
+  const provider = primary ? resolveProvider(primary.model) : 'deepseek'
+  const jsonMode = primary ? primary.jsonMode : true
+  return deps
+    .request({
+      url: gateway.url,
+      method: 'POST',
+      header: {
+        'Content-Type': 'application/json',
+        ...(gateway.token ? { Authorization: `Bearer ${gateway.token}` } : {}),
+      },
+      data: { model, provider, jsonMode, messages },
+      timeout: 30000,
+    })
+    .then((res) => {
+      const body = res.data as GatewayResponse
+      if (res.statusCode !== 200 || !body || body.code !== 0 || !body.data) {
+        console.warn('[failover] 网关兜底失败:', body?.msg || res.statusCode)
+        return null
+      }
+      const content = body.data.choices?.[0]?.message?.content ?? ''
+      const structured = parseStructuredReply(content)
+      if (isFormatFailure(content, structured)) {
+        console.warn('[failover] 网关兜底返回内容无法解析为结构化回复')
+        return null
+      }
+      return { text: formatStructuredText(structured), structured, memoryUpdates: structured.memoryUpdates }
+    })
+    .catch((e) => {
+      console.warn('[failover] 网关兜底异常:', e)
+      return null
+    })
 }
 
 export async function callDeepSeekAPI(params: CallDeepSeekParams): Promise<ChatResponse> {
@@ -68,79 +157,24 @@ export async function callDeepSeekAPI(params: CallDeepSeekParams): Promise<ChatR
     { role: 'user', content: userMessage },
   ]
 
-  // 模型配置：ai_model 存预设模型 id 或自定义标记；自定义模型走直连（网关不支持路由未知上游）
-  const modelSetting = (deps.getStorage('ai_model') as string) || 'deepseek-chat'
-  const isCustom = isCustomModel(modelSetting)
-  const customModelName = (deps.getStorage('ai_custom_model') as string) || ''
-  const customBaseUrl = (deps.getStorage('ai_base_url') as string) || ''
-  const modelOpt = getModelOption(modelSetting)
-  const requestModel = isCustom ? (customModelName || 'deepseek-chat') : modelSetting
-  const useJsonMode = !isCustom && modelOpt.jsonMode
+  const models = usableModels(readModels(deps.getStorage))
+  const gateway = readGatewayConfig(deps.getStorage)
 
-  // 优先走云端网关（密钥留在服务端，客户端不暴露；携带访问令牌鉴权）
-  // 默认启用内置网关（开箱即用），用户未显式关闭时自动走网关；自定义模型跳过网关
-  const useProxy = deps.getStorage('use_cloud_proxy') !== false
-  const customGatewayUrl = (deps.getStorage('cloud_gateway_url') as string) || ''
-  const gatewayUrl = customGatewayUrl || BUILTIN_GATEWAY_URL
-  if (useProxy && gatewayUrl && !isCustom) {
-    const gatewayToken = (deps.getStorage('cloud_gateway_token') as string) || BUILTIN_GATEWAY_TOKEN
-    try {
-      const proxyRes = await deps.request({
-        url: gatewayUrl,
-        method: 'POST',
-        header: {
-          'Content-Type': 'application/json',
-          ...(gatewayToken ? { Authorization: `Bearer ${gatewayToken}` } : {}),
-        },
-        data: {
-          model: requestModel,
-          provider: modelOpt.provider,
-          jsonMode: useJsonMode,
-          messages: requestMessages,
-        },
-        timeout: 30000,
-      })
-      const body = proxyRes.data as GatewayResponse
-      if (proxyRes.statusCode === 200 && body && body.code === 0 && body.data) {
-        const content = body.data.choices?.[0]?.message?.content ?? ''
-        const structured = parseStructuredReply(content)
-        return { text: formatStructuredText(structured), structured, memoryUpdates: structured.memoryUpdates }
-      }
-      console.warn('云端网关调用失败，回退直连:', body?.msg || proxyRes.statusCode)
-    } catch (e) {
-      console.warn('云端网关调用异常，回退直连:', e)
-    }
+  if (models.length === 0 && !gateway.enabled) {
+    throw new Error('未配置可用的 AI 服务：请在设置中添加至少一个带 API Key 的模型，或启用云端网关')
   }
 
-  const apiKeyValue = deps.getStorage('deepseek_api_key') as string
-  if (!apiKeyValue) {
-    throw new Error('未设置 API Key')
+  // 客户端直连优先：按配置顺序逐个尝试，硬失败或格式异常自动切换下一个
+  for (const model of models) {
+    const result = await directRequest(deps, model, requestMessages)
+    if (result) return result
   }
 
-  const directBaseUrl = isCustom ? (customBaseUrl || 'https://api.deepseek.com/chat/completions') : modelOpt.baseURL
-
-  const response = await deps.request({
-    url: directBaseUrl,
-    method: 'POST',
-    header: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKeyValue}`
-    },
-    data: {
-      model: requestModel,
-      messages: requestMessages,
-      stream: false,
-      ...(useJsonMode ? { response_format: { type: 'json_object' } } : {}),
-    },
-    timeout: 30000,
-  })
-
-  if (response.statusCode !== 200) {
-    throw new Error(`API 请求失败: ${response.statusCode}`)
+  // 网关兜底：全部直连失败后尝试一次
+  if (gateway.enabled) {
+    const result = await gatewayRequest(deps, gateway, models[0], requestMessages)
+    if (result) return result
   }
 
-  const data = response.data as ChatCompletionData
-  const content = data.choices?.[0]?.message?.content ?? ''
-  const structured = parseStructuredReply(content)
-  return { text: formatStructuredText(structured), structured, memoryUpdates: structured.memoryUpdates }
+  throw new Error(`所有模型均请求失败，请检查 API Key、接口地址或稍后重试（共尝试 ${models.length || 0} 个直连模型${gateway.enabled ? ' + 网关' : ''}）`)
 }

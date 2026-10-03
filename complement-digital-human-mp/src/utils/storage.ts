@@ -1,13 +1,9 @@
 export const STORAGE_KEYS = {
   personaData: 'persona_data',
-  deepseekApiKey: 'deepseek_api_key',
-  useDeepSeek: 'use_deepseek',
+  aiModels: 'ai_models',
   cloudGatewayUrl: 'cloud_gateway_url',
   cloudGatewayToken: 'cloud_gateway_token',
   useCloudProxy: 'use_cloud_proxy',
-  aiModel: 'ai_model',
-  aiCustomModel: 'ai_custom_model',
-  aiBaseUrl: 'ai_base_url',
 } as const
 
 export function readStorage<T>(key: string): T | null {

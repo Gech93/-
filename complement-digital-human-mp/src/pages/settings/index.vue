@@ -49,21 +49,15 @@
       <text class="group-title">AI 服务</text>
 
       <view class="setting-item">
-        <text class="setting-label">使用内置 AI 网关</text>
-        <switch :checked="useCloudProxy" @change="toggleCloudProxy" color="#ff6b9d" />
+        <text class="setting-label">云端网关兜底</text>
+        <switch :checked="gatewayEnabled" @change="toggleCloudProxy" color="#ff6b9d" />
       </view>
-      <view class="setting-hint" v-if="useCloudProxy && !gatewayUrl">
-        内置网关已启用，无需任何配置即可使用 AI 对话能力
-      </view>
-      <view class="setting-hint" v-else-if="useCloudProxy && gatewayUrl">
-        正在使用你配置的自定义网关地址
-      </view>
-      <view class="setting-hint" v-else>
-        已关闭网关，请在下方填写你自己的 DeepSeek API Key
+      <view class="setting-hint">
+        关闭时仅使用下方直连模型；开启时，所有直连模型都失败后会自动走网关兜底一次
       </view>
 
-      <view class="setting-item column" v-if="useCloudProxy">
-        <text class="setting-label">自定义网关地址（可选）</text>
+      <view class="setting-item column" v-if="gatewayEnabled">
+        <text class="setting-label">网关地址（可选）</text>
         <input
           v-model="gatewayUrl"
           class="setting-input"
@@ -73,8 +67,8 @@
         <text class="setting-hint">如需使用自部署的 uniCloud 网关，请填写云函数 URL</text>
       </view>
 
-      <view class="setting-item column" v-if="useCloudProxy">
-        <text class="setting-label">自定义网关令牌（可选）</text>
+      <view class="setting-item column" v-if="gatewayEnabled">
+        <text class="setting-label">网关令牌（可选）</text>
         <input
           v-model="gatewayToken"
           class="setting-input"
@@ -84,49 +78,68 @@
         />
       </view>
 
-      <view class="setting-item column">
-        <text class="setting-label">AI 模型</text>
-        <picker
-          mode="selector"
-          :range="modelLabels"
-          :value="modelIndex"
-          @change="onModelChange"
-        >
-          <view class="setting-input model-picker">{{ modelLabels[modelIndex] }}</view>
-        </picker>
-        <text class="setting-hint">网关模式支持预设模型；自定义模型需关闭网关并填写 API Key 直连</text>
+      <view class="model-list">
+        <view class="model-card" v-for="(m, idx) in models" :key="idx">
+          <view class="model-card-header">
+            <view class="model-name-row">
+              <text class="model-name">{{ m.name || '未命名模型' }}</text>
+              <text class="model-tag" v-if="m.enabled">已启用</text>
+              <text class="model-tag off" v-else>已停用</text>
+            </view>
+            <view class="model-actions">
+              <text class="action-btn" @click="moveModel(idx, -1)">↑</text>
+              <text class="action-btn" @click="moveModel(idx, 1)">↓</text>
+              <text class="action-btn danger" @click="removeModel(idx)">删除</text>
+            </view>
+          </view>
+
+          <view class="model-field">
+            <text class="field-label">名称</text>
+            <input
+              v-model="m.name"
+              class="setting-input"
+              placeholder="如 DeepSeek / GLM / Kimi"
+              @blur="persistModels"
+            />
+          </view>
+          <view class="model-field">
+            <text class="field-label">模型 ID</text>
+            <input
+              v-model="m.model"
+              class="setting-input"
+              placeholder="如 deepseek-chat / glm-4-plus"
+              @blur="persistModels"
+            />
+          </view>
+          <view class="model-field">
+            <text class="field-label">接口地址（可选）</text>
+            <input
+              v-model="m.baseUrl"
+              class="setting-input"
+              placeholder="留空按模型自动推导"
+              @blur="persistModels"
+            />
+          </view>
+          <view class="model-field">
+            <text class="field-label">API Key</text>
+            <input
+              v-model="m.apiKey"
+              class="setting-input"
+              placeholder="输入该模型的 API Key"
+              password
+              @blur="persistModels"
+            />
+          </view>
+          <view class="model-field switch-field">
+            <text class="field-label">启用（参与自动切换）</text>
+            <switch :checked="m.enabled" @change="toggleModel(idx, $event)" color="#ff6b9d" />
+          </view>
+        </view>
       </view>
 
-      <view class="setting-item column" v-if="aiModel === CUSTOM_MODEL_ID">
-        <text class="setting-label">自定义模型名称</text>
-        <input
-          v-model="customModelName"
-          class="setting-input"
-          placeholder="如 qwen-plus / gpt-3.5-turbo"
-          @blur="saveCustomModelName"
-        />
-      </view>
-
-      <view class="setting-item column" v-if="aiModel === CUSTOM_MODEL_ID">
-        <text class="setting-label">接口地址（OpenAI 兼容）</text>
-        <input
-          v-model="aiBaseUrl"
-          class="setting-input"
-          placeholder="如 https://api.openai.com/v1/chat/completions"
-          @blur="saveAiBaseUrl"
-        />
-      </view>
-
-      <view class="setting-item column" v-if="!useCloudProxy">
-        <text class="setting-label">DeepSeek API Key</text>
-        <input
-          v-model="apiKey"
-          class="setting-input"
-          placeholder="输入你的 DeepSeek API Key"
-          password
-          @blur="saveApiKey"
-        />
-        <text class="setting-hint">从 platform.deepseek.com 获取 API Key，填入后可直连 AI</text>
+      <view class="add-model-btn" @click="addModel">＋ 添加模型</view>
+      <view class="setting-hint">
+        可配置多个模型，对话时按顺序尝试；某个模型请求失败或回复无法解析时自动切换下一个，全部失败再由网关兜底
       </view>
     </view>
 
@@ -163,57 +176,60 @@ import { ref } from 'vue'
 import { usePersonaStore } from '../../stores/persona'
 import { buildBackupJson, importBackupJson, clearAllConversations } from '../../utils/backup'
 import { readStorage, writeStorage, STORAGE_KEYS } from '../../utils/storage'
-import { MODEL_OPTIONS, CUSTOM_MODEL_ID } from '../../pages/chat-conversation/modules/models'
+import {
+  readModels,
+  type UserModelConfig,
+} from '../../pages/chat-conversation/modules/models'
 import manifest from '../../manifest.json'
 
 const personaStore = usePersonaStore()
 
 const appVersion = `v${manifest.versionName || '1.0.0'}`
 
-const useCloudProxy = ref(readStorage(STORAGE_KEYS.useCloudProxy) !== false)
+const models = ref<UserModelConfig[]>(readModels(readStorage))
+const gatewayEnabled = ref(readStorage(STORAGE_KEYS.useCloudProxy) !== false)
 const gatewayUrl = ref((readStorage<string>(STORAGE_KEYS.cloudGatewayUrl) as string) || '')
 const gatewayToken = ref((readStorage<string>(STORAGE_KEYS.cloudGatewayToken) as string) || '')
-const apiKey = ref((readStorage<string>(STORAGE_KEYS.deepseekApiKey) as string) || '')
 
-const aiModel = ref((readStorage<string>(STORAGE_KEYS.aiModel) as string) || 'deepseek-chat')
-const customModelName = ref((readStorage<string>(STORAGE_KEYS.aiCustomModel) as string) || '')
-const aiBaseUrl = ref((readStorage<string>(STORAGE_KEYS.aiBaseUrl) as string) || '')
-
-const modelLabels = MODEL_OPTIONS.map(m => m.label).concat('自定义模型（直连）')
-const modelIndex = modelLabels.indexOf(
-  MODEL_OPTIONS.find(m => m.id === aiModel.value)?.label || modelLabels[modelLabels.length - 1]
-) === -1
-  ? modelLabels.length - 1
-  : Math.max(0, MODEL_OPTIONS.findIndex(m => m.id === aiModel.value))
-
-function onModelChange(e: Event) {
-  const detail = (e as unknown as { detail?: { value?: number } }).detail
-  const idx = detail?.value ?? 0
-  const opt = idx >= 0 && idx < MODEL_OPTIONS.length ? MODEL_OPTIONS[idx] : null
-  aiModel.value = opt ? opt.id : CUSTOM_MODEL_ID
-  writeStorage(STORAGE_KEYS.aiModel, aiModel.value)
-  uni.showToast({
-    title: `已切换模型: ${modelLabels[idx]}`,
-    icon: 'none'
-  })
+function persistModels() {
+  writeStorage(STORAGE_KEYS.aiModels, models.value)
 }
 
-function saveCustomModelName() {
-  writeStorage(STORAGE_KEYS.aiCustomModel, customModelName.value.trim())
-  uni.showToast({ title: '模型名称已保存', icon: 'none' })
+function addModel() {
+  models.value.push({ name: '', model: '', baseUrl: '', apiKey: '', jsonMode: true, enabled: true })
+  persistModels()
+  uni.showToast({ title: '已添加模型，请填写模型 ID 与 API Key', icon: 'none' })
 }
 
-function saveAiBaseUrl() {
-  writeStorage(STORAGE_KEYS.aiBaseUrl, aiBaseUrl.value.trim())
-  uni.showToast({ title: '接口地址已保存', icon: 'none' })
+function removeModel(idx: number) {
+  if (models.value.length === 1) {
+    uni.showToast({ title: '至少保留一个模型', icon: 'none' })
+    return
+  }
+  models.value.splice(idx, 1)
+  persistModels()
+}
+
+function moveModel(idx: number, dir: -1 | 1) {
+  const to = idx + dir
+  if (to < 0 || to >= models.value.length) return
+  const [item] = models.value.splice(idx, 1)
+  models.value.splice(to, 0, item)
+  persistModels()
+}
+
+function toggleModel(idx: number, e: Event) {
+  const detail = (e as unknown as { detail?: { value?: boolean } }).detail
+  models.value[idx].enabled = detail?.value ?? !models.value[idx].enabled
+  persistModels()
 }
 
 function toggleCloudProxy(e: Event) {
   const detail = (e as unknown as { detail?: { value?: boolean } }).detail
-  useCloudProxy.value = detail?.value ?? !useCloudProxy.value
-  writeStorage(STORAGE_KEYS.useCloudProxy, useCloudProxy.value)
+  gatewayEnabled.value = detail?.value ?? !gatewayEnabled.value
+  writeStorage(STORAGE_KEYS.useCloudProxy, gatewayEnabled.value)
   uni.showToast({
-    title: useCloudProxy.value ? '已启用云端网关' : '已关闭云端网关',
+    title: gatewayEnabled.value ? '已启用网关兜底' : '已关闭网关兜底',
     icon: 'none'
   })
 }
@@ -230,14 +246,6 @@ function saveGatewayToken() {
   writeStorage(STORAGE_KEYS.cloudGatewayToken, gatewayToken.value.trim())
   uni.showToast({
     title: '网关令牌已保存',
-    icon: 'none'
-  })
-}
-
-function saveApiKey() {
-  writeStorage(STORAGE_KEYS.deepseekApiKey, apiKey.value.trim())
-  uni.showToast({
-    title: 'API Key 已保存',
     icon: 'none'
   })
 }
@@ -478,12 +486,93 @@ function goToPersona() {
   font-size: 28rpx;
 }
 
-.model-picker {
+.model-list {
+  margin-top: 16rpx;
+}
+
+.model-card {
+  background: var(--dopamine-bg);
+  border-radius: 20rpx;
+  padding: 24rpx;
+  margin-bottom: 24rpx;
+}
+
+.model-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+.model-name-row {
   display: flex;
   align-items: center;
-  height: 72rpx;
-  line-height: 72rpx;
+  gap: 12rpx;
+}
+
+.model-name {
+  font-size: 30rpx;
+  font-weight: bold;
   color: var(--dopamine-text);
+}
+
+.model-tag {
+  font-size: 20rpx;
+  color: var(--dopamine-primary);
+  background: rgba(255, 107, 157, 0.12);
+  border-radius: 8rpx;
+  padding: 4rpx 12rpx;
+}
+
+.model-tag.off {
+  color: var(--dopamine-text-sub);
+  background: transparent;
+}
+
+.model-actions {
+  display: flex;
+  gap: 16rpx;
+}
+
+.action-btn {
+  font-size: 28rpx;
+  color: var(--dopamine-text-sub);
+  padding: 4rpx 12rpx;
+}
+
+.action-btn.danger {
+  color: var(--dopamine-danger);
+}
+
+.model-field {
+  margin-bottom: 16rpx;
+}
+
+.model-field.switch-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.field-label {
+  display: block;
+  font-size: 24rpx;
+  color: var(--dopamine-text-sub);
+  margin-bottom: 8rpx;
+}
+
+.switch-field .field-label {
+  margin-bottom: 0;
+}
+
+.add-model-btn {
+  text-align: center;
+  font-size: 28rpx;
+  color: var(--dopamine-primary);
+  border: 2rpx dashed var(--dopamine-primary);
+  border-radius: 16rpx;
+  padding: 20rpx 0;
+  margin-top: 8rpx;
 }
 
 .setting-label {
