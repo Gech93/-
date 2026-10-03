@@ -4,7 +4,9 @@
       <view class="slime-scene">
         <view class="scene-platform"></view>
 
-        <view class="connect-arc"></view>
+        <view class="connect-line conn-1"></view>
+        <view class="connect-line conn-2"></view>
+        <view class="connect-line conn-3"></view>
         <view class="connect-dot dot-1"></view>
         <view class="connect-dot dot-2"></view>
         <view class="connect-dot dot-3"></view>
@@ -20,7 +22,7 @@
           </view>
         </view>
 
-        <view class="mirror">
+        <view class="mirror mirror-1">
           <view class="mirror-frame">
             <view class="mirror-glass">
               <view class="reflection-slime">
@@ -34,14 +36,52 @@
               <view class="mirror-shine"></view>
             </view>
           </view>
-          <view class="mirror-neck"></view>
           <view class="mirror-base"></view>
+          <text class="mirror-tag">另一种思维</text>
+        </view>
+
+        <view class="mirror mirror-2">
+          <view class="mirror-frame">
+            <view class="mirror-glass">
+              <view class="reflection-slime">
+                <view class="reflection-body">
+                  <view class="reflection-eye"></view>
+                  <view class="reflection-cheek"></view>
+                  <view class="reflection-mouth"></view>
+                  <view class="reflection-gloss"></view>
+                </view>
+              </view>
+              <view class="mirror-shine"></view>
+            </view>
+          </view>
+          <view class="mirror-base"></view>
+          <text class="mirror-tag">另一个声音</text>
+        </view>
+
+        <view class="mirror mirror-3">
+          <view class="mirror-frame">
+            <view class="mirror-glass">
+              <view class="reflection-slime">
+                <view class="reflection-body">
+                  <view class="reflection-eye eye-l"></view>
+                  <view class="reflection-eye eye-r"></view>
+                  <view class="reflection-cheek ck-l"></view>
+                  <view class="reflection-cheek ck-r"></view>
+                  <view class="reflection-mouth"></view>
+                  <view class="reflection-gloss"></view>
+                </view>
+              </view>
+              <view class="mirror-shine"></view>
+            </view>
+          </view>
+          <view class="mirror-base"></view>
+          <text class="mirror-tag">另一个视角</text>
         </view>
       </view>
 
       <text class="hero-title">互补数字人</text>
-      <text class="hero-subtitle">遇见另一个视角的你</text>
-      <text class="hero-caption">镜子里的它，是侧身的你 —— 源自你，却并非你</text>
+      <text class="hero-subtitle">一个你 · 多面互补</text>
+      <text class="hero-caption">每一面镜子，都照见一种互补的你 —— 源自你，却并非你</text>
     </view>
 
     <view class="features-section">
@@ -129,11 +169,11 @@ function handleStart() {
   padding-top: 24rpx;
 }
 
-/* ===== 史莱姆照镜子场景 ===== */
+/* ===== 一个主体 · 三面镜子场景 ===== */
 .slime-scene {
   position: relative;
-  width: 600rpx;
-  height: 450rpx;
+  width: 640rpx;
+  height: 520rpx;
   margin-bottom: 32rpx;
 }
 
@@ -142,47 +182,64 @@ function handleStart() {
   bottom: 20rpx;
   left: 50%;
   transform: translateX(-50%);
-  width: 540rpx;
-  height: 90rpx;
+  width: 560rpx;
+  height: 92rpx;
   background: rgba(255, 255, 255, 0.16);
   border-radius: 50%;
 }
 
-.connect-arc {
+/* 连接线：本体 → 三面镜子 */
+.connect-line {
   position: absolute;
-  top: 132rpx;
-  left: 300rpx;
-  width: 96rpx;
-  height: 64rpx;
-  border-top: 4rpx dashed rgba(255, 255, 255, 0.5);
-  border-radius: 50%;
-  transform: rotate(-14deg);
+  width: 0;
+  border-left: 4rpx dashed rgba(255, 255, 255, 0.55);
+  transform-origin: top center;
+}
+
+.conn-1 {
+  left: 206rpx;
+  top: 232rpx;
+  height: 100rpx;
+  transform: rotate(-36deg);
+}
+
+.conn-2 {
+  left: 424rpx;
+  top: 232rpx;
+  height: 100rpx;
+  transform: rotate(36deg);
+}
+
+.conn-3 {
+  left: 318rpx;
+  top: 196rpx;
+  height: 56rpx;
 }
 
 .connect-dot {
   position: absolute;
   width: 12rpx;
   height: 12rpx;
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.9);
   border-radius: 50%;
   animation: dot-twinkle 2.4s ease-in-out infinite;
 }
 
 .dot-1 {
-  top: 168rpx;
-  left: 50%;
+  left: 138rpx;
+  top: 118rpx;
 }
 
 .dot-2 {
-  top: 218rpx;
-  left: 54%;
-  animation-delay: 0.6s;
+  left: 490rpx;
+  top: 118rpx;
+  animation-delay: 0.8s;
 }
 
 .dot-3 {
-  top: 268rpx;
-  left: 50%;
-  animation-delay: 1.2s;
+  left: 314rpx;
+  top: 178rpx;
+  animation-delay: 1.6s;
 }
 
 @keyframes dot-twinkle {
@@ -197,13 +254,14 @@ function handleStart() {
   }
 }
 
-/* 本体史莱姆：正面，看向镜子 */
+/* 主体史莱姆：正面，居中的「一个你」 */
 .slime-main {
   position: absolute;
-  left: 5%;
-  bottom: 56rpx;
-  width: 240rpx;
-  height: 240rpx;
+  left: 50%;
+  bottom: 40rpx;
+  width: 224rpx;
+  height: 224rpx;
+  transform: translateX(-50%);
 }
 
 .slime-body {
@@ -234,20 +292,20 @@ function handleStart() {
 
 .slime-eye {
   position: absolute;
-  top: 74rpx;
-  width: 44rpx;
-  height: 56rpx;
+  top: 70rpx;
+  width: 42rpx;
+  height: 52rpx;
   background: #fff;
   border-radius: 50%;
   box-shadow: inset 0 -4rpx 8rpx rgba(45, 42, 62, 0.08);
 }
 
 .eye-left {
-  left: 54rpx;
+  left: 50rpx;
 }
 
 .eye-right {
-  right: 54rpx;
+  right: 50rpx;
 }
 
 .slime-eye::after {
@@ -264,27 +322,27 @@ function handleStart() {
 
 .slime-cheek {
   position: absolute;
-  top: 138rpx;
-  width: 38rpx;
-  height: 22rpx;
+  top: 128rpx;
+  width: 36rpx;
+  height: 20rpx;
   background: rgba(224, 49, 105, 0.35);
   border-radius: 50%;
 }
 
 .cheek-left {
-  left: 28rpx;
+  left: 26rpx;
 }
 
 .cheek-right {
-  right: 28rpx;
+  right: 26rpx;
 }
 
 .slime-mouth {
   position: absolute;
   left: 50%;
-  bottom: 52rpx;
-  width: 38rpx;
-  height: 20rpx;
+  bottom: 46rpx;
+  width: 36rpx;
+  height: 18rpx;
   border: 6rpx solid var(--dopamine-text);
   border-top: none;
   border-radius: 0 0 40rpx 40rpx;
@@ -293,46 +351,76 @@ function handleStart() {
 
 .slime-gloss {
   position: absolute;
-  top: 34rpx;
-  left: 60rpx;
-  width: 68rpx;
-  height: 32rpx;
+  top: 32rpx;
+  left: 56rpx;
+  width: 64rpx;
+  height: 30rpx;
   background: rgba(255, 255, 255, 0.55);
   border-radius: 50%;
   transform: rotate(-18deg);
 }
 
-/* 镜子 */
+/* 三面镜子：弧线排列在主体上方 */
 .mirror {
   position: absolute;
-  right: 3%;
-  bottom: 36rpx;
-  width: 190rpx;
-  height: 290rpx;
+}
+
+.mirror-1 {
+  left: 2%;
+  top: 44rpx;
+  width: 150rpx;
+  height: 224rpx;
+}
+
+.mirror-2 {
+  right: 2%;
+  top: 44rpx;
+  width: 150rpx;
+  height: 224rpx;
+}
+
+.mirror-3 {
+  left: 50%;
+  top: 0;
+  width: 128rpx;
+  height: 188rpx;
+  transform: translateX(-50%);
 }
 
 .mirror-frame {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: linear-gradient(150deg, #d6c9ff 0%, var(--dopamine-purple) 55%, #8b5cf6 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 24rpx 48rpx rgba(139, 92, 246, 0.45),
-    inset 0 0 0 10rpx rgba(255, 255, 255, 0.28);
+  box-shadow: 0 20rpx 40rpx rgba(139, 92, 246, 0.32),
+    inset 0 0 0 8rpx rgba(255, 255, 255, 0.28);
   animation: mirror-glow 3.2s ease-in-out infinite;
+}
+
+.mirror-1 .mirror-frame {
+  background: linear-gradient(150deg, #d6c9ff 0%, var(--dopamine-purple) 55%, #8b5cf6 100%);
+}
+
+.mirror-2 .mirror-frame {
+  background: linear-gradient(150deg, #ffd3e3 0%, var(--dopamine-primary) 55%, #f55c92 100%);
+}
+
+.mirror-3 .mirror-frame {
+  background: linear-gradient(150deg, #ede4ff 0%, #c4b5fd 55%, #a78bfa 100%);
+  animation-delay: 0.6s;
 }
 
 @keyframes mirror-glow {
   0%,
   100% {
-    box-shadow: 0 24rpx 48rpx rgba(139, 92, 246, 0.4),
-      inset 0 0 0 10rpx rgba(255, 255, 255, 0.28);
+    box-shadow: 0 20rpx 40rpx rgba(139, 92, 246, 0.32),
+      inset 0 0 0 8rpx rgba(255, 255, 255, 0.28);
   }
   50% {
-    box-shadow: 0 24rpx 48rpx rgba(139, 92, 246, 0.58),
-      inset 0 0 0 10rpx rgba(255, 255, 255, 0.34);
+    box-shadow: 0 20rpx 40rpx rgba(167, 139, 250, 0.5),
+      inset 0 0 0 8rpx rgba(255, 255, 255, 0.34);
   }
 }
 
@@ -348,43 +436,61 @@ function handleStart() {
   justify-content: center;
 }
 
-.mirror-neck {
-  position: absolute;
-  bottom: -44rpx;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 34rpx;
-  height: 38rpx;
-  background: rgba(255, 255, 255, 0.35);
-  border-radius: 8rpx 8rpx 0 0;
+.mirror-2 .mirror-glass {
+  background: linear-gradient(175deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 224, 238, 0.9) 60%, rgba(255, 205, 228, 0.94) 100%);
+}
+
+.mirror-3 .mirror-glass {
+  background: linear-gradient(175deg, rgba(255, 255, 255, 0.96) 0%, rgba(240, 235, 255, 0.92) 60%, rgba(226, 216, 255, 0.95) 100%);
 }
 
 .mirror-base {
   position: absolute;
-  bottom: -28rpx;
+  bottom: -20rpx;
   left: 50%;
   transform: translateX(-50%);
-  width: 116rpx;
-  height: 24rpx;
+  width: 96rpx;
+  height: 20rpx;
   background: rgba(255, 255, 255, 0.4);
   border-radius: 20rpx;
 }
 
-/* 镜中倒影：侧身的「数字分身」 */
+.mirror-tag {
+  position: absolute;
+  left: 50%;
+  bottom: -56rpx;
+  transform: translateX(-50%);
+  font-size: 20rpx;
+  line-height: 1.2;
+  color: rgba(255, 255, 255, 0.92);
+  padding: 8rpx 16rpx;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 24rpx;
+  white-space: nowrap;
+}
+
+/* 镜中倒影：三种互补的「数字分身」 */
 .reflection-slime {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 112rpx;
-  height: 124rpx;
-  transform: translate(-50%, -52%);
+  transform: translate(-50%, -50%);
+}
+
+.mirror-1 .reflection-slime,
+.mirror-2 .reflection-slime {
+  width: 96rpx;
+  height: 104rpx;
+}
+
+.mirror-3 .reflection-slime {
+  width: 74rpx;
+  height: 80rpx;
 }
 
 .reflection-body {
   position: absolute;
   inset: 0;
-  border-radius: 62% 38% 42% 58% / 58% 56% 44% 42%;
-  background: linear-gradient(155deg, #ff9ec3 0%, var(--dopamine-purple) 100%);
   box-shadow: 0 0 24rpx rgba(167, 139, 250, 0.55);
   animation: reflect-breathe 3.2s ease-in-out infinite;
 }
@@ -394,7 +500,33 @@ function handleStart() {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: repeating-linear-gradient(0deg, rgba(167, 139, 250, 0.14) 0 4rpx, transparent 4rpx 10rpx);
+}
+
+.mirror-1 .reflection-body {
+  border-radius: 62% 38% 42% 58% / 58% 56% 44% 42%;
+  background: linear-gradient(155deg, #ff9ec3 0%, var(--dopamine-purple) 100%);
+}
+
+.mirror-1 .reflection-body::after {
+  background: repeating-linear-gradient(0deg, rgba(167, 139, 250, 0.16) 0 4rpx, transparent 4rpx 10rpx);
+}
+
+.mirror-2 .reflection-body {
+  border-radius: 38% 62% 58% 42% / 58% 56% 44% 42%;
+  background: linear-gradient(155deg, #ffc9dd 0%, var(--dopamine-primary) 100%);
+}
+
+.mirror-2 .reflection-body::after {
+  background: repeating-linear-gradient(0deg, rgba(255, 107, 157, 0.18) 0 4rpx, transparent 4rpx 10rpx);
+}
+
+.mirror-3 .reflection-body {
+  border-radius: 50% 50% 46% 46% / 56% 56% 44% 44%;
+  background: linear-gradient(155deg, #e6d8ff 0%, var(--dopamine-purple) 100%);
+}
+
+.mirror-3 .reflection-body::after {
+  background: repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.18) 0 3rpx, transparent 3rpx 8rpx);
 }
 
 @keyframes reflect-breathe {
@@ -407,12 +539,12 @@ function handleStart() {
   }
 }
 
+/* 倒影五官 */
 .reflection-eye {
   position: absolute;
-  right: 12rpx;
-  top: 36rpx;
-  width: 32rpx;
-  height: 40rpx;
+  top: 34rpx;
+  width: 30rpx;
+  height: 38rpx;
   background: #fff;
   border-radius: 50%;
 }
@@ -422,54 +554,146 @@ function handleStart() {
   position: absolute;
   right: 6rpx;
   top: 50%;
-  width: 16rpx;
-  height: 18rpx;
+  width: 15rpx;
+  height: 17rpx;
   background: var(--dopamine-text);
   border-radius: 50%;
   transform: translateY(-50%);
 }
 
+.mirror-1 .reflection-eye {
+  right: 12rpx;
+}
+
+.mirror-2 .reflection-eye {
+  left: 12rpx;
+}
+
+.mirror-2 .reflection-eye::after {
+  left: 6rpx;
+  right: auto;
+}
+
+.mirror-3 .reflection-eye {
+  top: 22rpx;
+  width: 24rpx;
+  height: 30rpx;
+}
+
+.mirror-3 .reflection-eye::after {
+  width: 12rpx;
+  height: 14rpx;
+}
+
+.mirror-3 .reflection-eye.eye-l {
+  left: 12rpx;
+}
+
+.mirror-3 .reflection-eye.eye-r {
+  right: 12rpx;
+}
+
 .reflection-cheek {
   position: absolute;
-  right: 4rpx;
   top: 64rpx;
-  width: 22rpx;
-  height: 14rpx;
+  width: 20rpx;
+  height: 12rpx;
   background: rgba(224, 49, 105, 0.35);
   border-radius: 50%;
 }
 
+.mirror-1 .reflection-cheek {
+  right: 2rpx;
+}
+
+.mirror-2 .reflection-cheek {
+  left: 2rpx;
+}
+
+.mirror-3 .reflection-cheek {
+  top: 44rpx;
+  width: 16rpx;
+  height: 10rpx;
+}
+
+.mirror-3 .reflection-cheek.ck-l {
+  left: 4rpx;
+}
+
+.mirror-3 .reflection-cheek.ck-r {
+  right: 4rpx;
+}
+
 .reflection-mouth {
   position: absolute;
-  right: 28rpx;
-  bottom: 26rpx;
-  width: 26rpx;
-  height: 14rpx;
+  bottom: 22rpx;
+  width: 24rpx;
+  height: 12rpx;
   border: 4rpx solid var(--dopamine-text);
   border-top: none;
   border-radius: 0 0 30rpx 30rpx;
 }
 
+.mirror-1 .reflection-mouth {
+  right: 24rpx;
+}
+
+.mirror-2 .reflection-mouth {
+  left: 24rpx;
+  background: var(--dopamine-text);
+  border: none;
+  height: 14rpx;
+  border-radius: 0 0 16rpx 16rpx;
+}
+
+.mirror-3 .reflection-mouth {
+  left: 50%;
+  bottom: 14rpx;
+  width: 18rpx;
+  height: 9rpx;
+  border-width: 3rpx;
+  transform: translateX(-50%);
+}
+
 .reflection-gloss {
   position: absolute;
-  top: 16rpx;
-  left: 24rpx;
-  width: 34rpx;
-  height: 16rpx;
+  top: 14rpx;
+  width: 28rpx;
+  height: 14rpx;
   background: rgba(255, 255, 255, 0.6);
   border-radius: 50%;
   transform: rotate(-18deg);
 }
 
+.mirror-1 .reflection-gloss {
+  left: 18rpx;
+}
+
+.mirror-2 .reflection-gloss {
+  right: 18rpx;
+}
+
+.mirror-3 .reflection-gloss {
+  top: 10rpx;
+  left: 12rpx;
+  width: 22rpx;
+  height: 12rpx;
+}
+
 .mirror-shine {
   position: absolute;
-  top: 16rpx;
-  left: 20rpx;
-  width: 56rpx;
-  height: 112rpx;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.05));
-  border-radius: 30rpx;
+  top: 14rpx;
+  left: 16rpx;
+  width: 46rpx;
+  height: 92rpx;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.05));
+  border-radius: 26rpx;
   transform: rotate(18deg);
+}
+
+.mirror-3 .mirror-shine {
+  width: 36rpx;
+  height: 70rpx;
 }
 
 /* ===== 文案区 ===== */
