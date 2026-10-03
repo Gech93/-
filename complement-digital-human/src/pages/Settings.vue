@@ -5,37 +5,86 @@
     </div>
 
     <div class="settings-section">
-      <p class="section-title">AI设置</p>
-      
-      <div class="setting-item">
-        <div class="setting-left">
-          <span class="setting-icon">🔑</span>
-          <div class="setting-info">
-            <span class="setting-name">DeepSeek API Key</span>
-            <span class="setting-desc">输入你的API密钥以启用真实AI</span>
-          </div>
-        </div>
-        <input
-          type="password"
-          class="api-input"
-          v-model="apiKey"
-          placeholder="输入API Key"
-          @input="handleApiKeyChange"
-        />
-      </div>
+      <p class="section-title">AI服务</p>
 
       <div class="setting-item">
         <div class="setting-left">
-          <span class="setting-icon">🤖</span>
+          <span class="setting-icon">☁️</span>
           <div class="setting-info">
-            <span class="setting-name">使用模拟AI</span>
-            <span class="setting-desc">关闭后将使用DeepSeek真实AI</span>
+            <span class="setting-name">云端网关兜底</span>
+            <span class="setting-desc">关闭时仅使用下方直连模型；开启时，所有直连模型都失败后会自动走网关兜底一次</span>
           </div>
         </div>
-        <div class="toggle-switch" :class="{ active: settingsStore.apiSettings.useMockAI }" @click="toggleMockAI">
+        <div class="toggle-switch" :class="{ active: gatewayEnabled }" @click="toggleCloudProxy">
           <div class="toggle-dot"></div>
         </div>
       </div>
+
+      <div class="setting-item column" v-if="gatewayEnabled">
+        <label class="setting-label">网关地址（可选）</label>
+        <input
+          v-model="gatewayUrl"
+          class="api-input full"
+          placeholder="留空则使用内置网关"
+          @blur="saveGatewayUrl"
+        />
+      </div>
+
+      <div class="setting-item column" v-if="gatewayEnabled">
+        <label class="setting-label">网关令牌（可选）</label>
+        <input
+          v-model="gatewayToken"
+          class="api-input full"
+          placeholder="留空则使用内置令牌"
+          type="password"
+          @blur="saveGatewayToken"
+        />
+      </div>
+
+      <div class="model-list">
+        <div class="model-card" v-for="(m, idx) in models" :key="idx">
+          <div class="model-card-header">
+            <div class="model-name-row">
+              <span class="model-name">{{ m.name || '未命名模型' }}</span>
+              <span class="model-tag" v-if="m.enabled">已启用</span>
+              <span class="model-tag off" v-else>已停用</span>
+            </div>
+            <div class="model-actions">
+              <button class="action-btn" @click="moveModel(idx, -1)">↑</button>
+              <button class="action-btn" @click="moveModel(idx, 1)">↓</button>
+              <button class="action-btn danger" @click="removeModel(idx)">删除</button>
+            </div>
+          </div>
+
+          <div class="model-field">
+            <label class="field-label">名称</label>
+            <input v-model="m.name" class="api-input full" placeholder="如 DeepSeek / GLM / Kimi" @blur="persistModels" />
+          </div>
+          <div class="model-field">
+            <label class="field-label">模型 ID</label>
+            <input v-model="m.model" class="api-input full" placeholder="如 deepseek-chat / glm-4-plus" @blur="persistModels" />
+          </div>
+          <div class="model-field">
+            <label class="field-label">接口地址（可选）</label>
+            <input v-model="m.baseUrl" class="api-input full" placeholder="留空按模型自动推导" @blur="persistModels" />
+          </div>
+          <div class="model-field">
+            <label class="field-label">API Key</label>
+            <input v-model="m.apiKey" class="api-input full" placeholder="输入该模型的 API Key" type="password" @blur="persistModels" />
+          </div>
+          <div class="model-field switch-field">
+            <label class="field-label">启用（参与自动切换）</label>
+            <div class="toggle-switch small" :class="{ active: m.enabled }" @click="toggleModel(idx)">
+              <div class="toggle-dot"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <button class="add-model-btn" @click="addModel">＋ 添加模型</button>
+      <p class="setting-hint">
+        可配置多个模型，对话时按顺序尝试；某个模型请求失败或回复无法解析时自动切换下一个，全部失败再由网关兜底
+      </p>
     </div>
 
     <div class="settings-section">
@@ -72,7 +121,7 @@
           <span class="setting-icon">ℹ️</span>
           <div class="setting-info">
             <span class="setting-name">版本信息</span>
-            <span class="setting-desc">v1.1.0 DeepSeek AI版本</span>
+            <span class="setting-desc">v1.2.0 多模型 AI 版本</span>
           </div>
         </div>
       </div>
@@ -161,29 +210,68 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useSettingsStore } from '../stores/settings'
 import { usePersonaStore } from '../stores/persona'
 import TabBar from '../components/TabBar.vue'
+import { readModels, type UserModelConfig } from '../services/models'
+import { readStorage, writeStorage, STORAGE_KEYS } from '../services/storage'
 
 const router = useRouter()
 const settingsStore = useSettingsStore()
 const personaStore = usePersonaStore()
 
 const showAbout = ref(false)
-const apiKey = ref('')
 
-onMounted(() => {
-  apiKey.value = settingsStore.apiSettings.deepseekApiKey
-})
+const models = ref<UserModelConfig[]>(readModels(readStorage))
+const gatewayEnabled = ref(readStorage(STORAGE_KEYS.useCloudProxy) !== false)
+const gatewayUrl = ref((readStorage<string>(STORAGE_KEYS.cloudGatewayUrl) as string) || '')
+const gatewayToken = ref((readStorage<string>(STORAGE_KEYS.cloudGatewayToken) as string) || '')
 
-function handleApiKeyChange() {
-  settingsStore.updateAPISettings({ deepseekApiKey: apiKey.value })
+function persistModels() {
+  writeStorage(STORAGE_KEYS.aiModels, models.value)
 }
 
-function toggleMockAI() {
-  settingsStore.updateAPISettings({ useMockAI: !settingsStore.apiSettings.useMockAI })
+function addModel() {
+  models.value.push({ name: '', model: '', baseUrl: '', apiKey: '', jsonMode: true, enabled: true })
+  persistModels()
+  alert('已添加模型，请填写模型 ID 与 API Key')
+}
+
+function removeModel(idx: number) {
+  if (models.value.length === 1) {
+    alert('至少保留一个模型')
+    return
+  }
+  models.value.splice(idx, 1)
+  persistModels()
+}
+
+function moveModel(idx: number, dir: -1 | 1) {
+  const to = idx + dir
+  if (to < 0 || to >= models.value.length) return
+  const [item] = models.value.splice(idx, 1)
+  models.value.splice(to, 0, item)
+  persistModels()
+}
+
+function toggleModel(idx: number) {
+  models.value[idx].enabled = !models.value[idx].enabled
+  persistModels()
+}
+
+function toggleCloudProxy() {
+  gatewayEnabled.value = !gatewayEnabled.value
+  writeStorage(STORAGE_KEYS.useCloudProxy, gatewayEnabled.value)
+}
+
+function saveGatewayUrl() {
+  writeStorage(STORAGE_KEYS.cloudGatewayUrl, gatewayUrl.value.trim())
+}
+
+function saveGatewayToken() {
+  writeStorage(STORAGE_KEYS.cloudGatewayToken, gatewayToken.value.trim())
 }
 
 function goToPrivacy() {
@@ -438,8 +526,147 @@ function handleClearData() {
   transition: border-color 0.3s;
 }
 
+.api-input.full {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .api-input:focus {
   border-color: #667eea;
+}
+
+.setting-item.column {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.setting-label {
+  font-size: 14px;
+  color: #999999;
+}
+
+.setting-hint {
+  font-size: 12px;
+  color: #999999;
+  line-height: 1.5;
+  padding: 12px 20px;
+  margin: 0;
+}
+
+.model-list {
+  padding: 0 20px 12px;
+}
+
+.model-card {
+  background: #f5f5f5;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.model-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.model-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.model-name {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333333;
+}
+
+.model-tag {
+  font-size: 11px;
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 6px;
+  padding: 2px 8px;
+}
+
+.model-tag.off {
+  color: #999999;
+  background: transparent;
+}
+
+.model-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  padding: 4px 10px;
+  font-size: 13px;
+  color: #666666;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.action-btn.danger {
+  color: #ff3b30;
+}
+
+.model-field {
+  margin-bottom: 12px;
+}
+
+.model-field.switch-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.field-label {
+  display: block;
+  font-size: 13px;
+  color: #999999;
+  margin-bottom: 6px;
+}
+
+.switch-field .field-label {
+  margin-bottom: 0;
+}
+
+.toggle-switch.small {
+  width: 44px;
+  height: 26px;
+  border-radius: 13px;
+  flex-shrink: 0;
+}
+
+.toggle-switch.small .toggle-dot {
+  width: 22px;
+  height: 22px;
+  top: 2px;
+  left: 2px;
+}
+
+.toggle-switch.small.active .toggle-dot {
+  transform: translateX(18px);
+}
+
+.add-model-btn {
+  display: block;
+  width: calc(100% - 40px);
+  margin: 0 20px;
+  padding: 12px 0;
+  text-align: center;
+  font-size: 15px;
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.08);
+  border: 1px dashed #667eea;
+  border-radius: 12px;
+  cursor: pointer;
 }
 
 .toggle-switch {

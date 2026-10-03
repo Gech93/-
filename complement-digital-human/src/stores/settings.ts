@@ -9,9 +9,8 @@ interface PrivacySettings {
   dataRetentionDays: number
 }
 
-// API设置类型
+// API设置类型（AI 模型与网关配置统一存于 localStorage，见 services/models.ts 与 services/storage.ts）
 interface APISettings {
-  deepseekApiKey: string
   useMockAI: boolean
 }
 
@@ -25,7 +24,6 @@ export const useSettingsStore = defineStore('settings', () => {
   })
   
   const apiSettings = ref<APISettings>({
-    deepseekApiKey: '',
     useMockAI: true, // 默认使用模拟AI
   })
   
@@ -55,12 +53,36 @@ export const useSettingsStore = defineStore('settings', () => {
     
     const personaData = localStorage.getItem('persona_data')
     const conversationData = localStorage.getItem('conversations')
+    const privacyData = localStorage.getItem('privacy_settings')
+    const apiData = localStorage.getItem('api_settings')
+    const aiModels = localStorage.getItem('ai_models')
+    const gatewayUrl = localStorage.getItem('cloud_gateway_url')
+    const gatewayToken = localStorage.getItem('cloud_gateway_token')
+    const useCloudProxy = localStorage.getItem('use_cloud_proxy')
     
     if (personaData) {
       allData.persona = JSON.parse(personaData)
     }
     if (conversationData) {
       allData.conversations = JSON.parse(conversationData)
+    }
+    if (privacyData) {
+      allData.privacy = JSON.parse(privacyData)
+    }
+    if (apiData) {
+      allData.api = JSON.parse(apiData)
+    }
+    if (aiModels) {
+      allData.ai_models = JSON.parse(aiModels)
+    }
+    if (gatewayUrl) {
+      allData.cloud_gateway_url = gatewayUrl
+    }
+    if (gatewayToken) {
+      allData.cloud_gateway_token = gatewayToken
+    }
+    if (useCloudProxy !== null) {
+      allData.use_cloud_proxy = useCloudProxy === 'true'
     }
     
     return JSON.stringify(allData, null, 2)
@@ -77,7 +99,6 @@ export const useSettingsStore = defineStore('settings', () => {
         dataRetentionDays: 365,
       }
       apiSettings.value = {
-        deepseekApiKey: '',
         useMockAI: true,
       }
       alert('数据已清除')

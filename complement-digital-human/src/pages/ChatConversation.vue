@@ -103,81 +103,24 @@
       </div>
     </div>
 
-    <!-- AI 服务设置弹窗 -->
+    <!-- AI 服务配置弹窗 -->
     <div class="modal-overlay" v-if="showApiKeyModal" @click="showApiKeyModal = false">
       <div class="modal-content" @click.stop>
-        <h3 class="modal-title">AI 服务设置</h3>
+        <h3 class="modal-title">AI 服务配置</h3>
 
         <div class="form-group">
-          <label class="form-label">
-            <input type="checkbox" v-model="useGateway" />
-            使用内置 AI 网关
-          </label>
-          <p class="form-hint" v-if="useGateway">内置网关已启用，无需配置即可使用 AI 对话</p>
-          <p class="form-hint" v-else>已关闭网关，请在下方填写你自己的 API Key</p>
+          <p class="form-hint" v-if="aiReady">当前已配置可用的 AI 服务，对话将由真实模型回复；配置多个模型时，某个模型不流畅会自动切换下一个。</p>
+          <p class="form-hint" v-else>尚未配置可用的 AI 服务，当前对话使用演示回复。请在设置页添加模型（DeepSeek / GLM / Kimi / OpenAI 等）或启用云端网关。</p>
         </div>
 
-        <div class="form-group" v-if="useGateway">
-          <label class="form-label">自定义网关地址（可选）</label>
-          <input
-            v-model="gatewayUrl"
-            class="form-input"
-            placeholder="留空则使用内置网关"
-          />
-          <p class="form-hint">如需使用自建网关，请填写地址</p>
-        </div>
-
-        <div class="form-group" v-if="useGateway">
-          <label class="form-label">自定义网关令牌（可选）</label>
-          <input
-            v-model="gatewayToken"
-            class="form-input"
-            placeholder="留空则使用内置令牌"
-            type="password"
-          />
-        </div>
-
-        <div class="form-group" v-if="!useGateway">
-          <label class="form-label">DeepSeek API Key</label>
-          <input
-            v-model="apiKey"
-            class="form-input"
-            placeholder="输入你的 DeepSeek API Key"
-            type="password"
-          />
-          <p class="form-hint">从 platform.deepseek.com 获取 API Key</p>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">AI 模型</label>
-          <select v-model="aiModel" class="form-input">
-            <option v-for="opt in MODEL_OPTIONS" :key="opt.id" :value="opt.id">{{ opt.label }}</option>
-            <option :value="CUSTOM_MODEL_ID">自定义模型（直连）</option>
-          </select>
-          <p class="form-hint">网关模式支持预设模型；自定义模型需关闭网关并填写 API Key 直连</p>
-        </div>
-
-        <div class="form-group" v-if="aiModel === CUSTOM_MODEL_ID">
-          <label class="form-label">自定义模型名称</label>
-          <input
-            v-model="customModelName"
-            class="form-input"
-            placeholder="如 qwen-plus / gpt-3.5-turbo"
-          />
-        </div>
-
-        <div class="form-group" v-if="aiModel === CUSTOM_MODEL_ID">
-          <label class="form-label">接口地址（OpenAI 兼容）</label>
-          <input
-            v-model="aiBaseUrl"
-            class="form-input"
-            placeholder="如 https://api.openai.com/v1/chat/completions"
-          />
+        <div class="api-info">
+          <p>模型列表管理位于：设置 → AI 服务</p>
+          <p>支持自定义任意模型，可同时配置多个并按序自动切换</p>
         </div>
 
         <div class="modal-actions">
           <button class="btn btn-cancel" @click="showApiKeyModal = false">取消</button>
-          <button class="btn btn-save" @click="saveApiSettings">保存</button>
+          <button class="btn btn-save" @click="goSettings">前往设置</button>
         </div>
       </div>
     </div>
@@ -188,28 +131,9 @@
 import { ref, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePersonaStore } from '../stores/persona'
-import { buildSystemPrompt, buildStructuredInstruction } from '../services/deepseek'
-import { MODEL_OPTIONS, CUSTOM_MODEL_ID, getModelOption, isCustomModel } from '../services/models'
-
-// ===== 开发者内置网关配置（开箱即用）=====
-// 部署网关服务后，将地址与令牌填入此处，用户无需任何配置即可使用 AI
-const BUILTIN_GATEWAY_URL = '' // 例: 'https://your-gateway.example.com/chat'
-const BUILTIN_GATEWAY_TOKEN = '' // 网关访问令牌
-interface StructuredReply {
-  perspective: string
-  suggestions: string[]
-  followUpQuestion: string
-  memoryUpdates?: {
-    facts?: Array<{ content: string; category?: string }>
-    summary?: string
-    behavior?: {
-      emotionTendency?: string
-      decisionStyle?: string
-      expressionStyle?: string
-      deepNeed?: string
-    }
-  }
-}
+import { callAI, parseStructuredReply, type StructuredReply } from '../services/chat'
+import { hasUsableAi } from '../services/models'
+import { readStorage } from '../services/storage'
 
 interface Message {
   id: string
@@ -231,13 +155,7 @@ const personaName = ref('数字人')
 const personaMbti = ref('AI')
 
 const showApiKeyModal = ref(false)
-const apiKey = ref('')
-const useGateway = ref(true)
-const gatewayUrl = ref('')
-const gatewayToken = ref('')
-const aiModel = ref('deepseek-chat')
-const customModelName = ref('')
-const aiBaseUrl = ref('')
+const aiReady = ref(false)
 const remainDays = ref(0)
 
 // 获取存储键
@@ -260,20 +178,7 @@ onMounted(() => {
 })
 
 function loadApiSettings() {
-  const savedKey = localStorage.getItem('deepseek_api_key')
-  if (savedKey) apiKey.value = savedKey
-  const savedUseGateway = localStorage.getItem('use_gateway')
-  useGateway.value = savedUseGateway !== 'false'
-  const savedGatewayUrl = localStorage.getItem('gateway_url')
-  if (savedGatewayUrl) gatewayUrl.value = savedGatewayUrl
-  const savedGatewayToken = localStorage.getItem('gateway_token')
-  if (savedGatewayToken) gatewayToken.value = savedGatewayToken
-  const savedAiModel = localStorage.getItem('ai_model')
-  if (savedAiModel) aiModel.value = savedAiModel
-  const savedCustomModelName = localStorage.getItem('ai_custom_model')
-  if (savedCustomModelName) customModelName.value = savedCustomModelName
-  const savedAiBaseUrl = localStorage.getItem('ai_base_url')
-  if (savedAiBaseUrl) aiBaseUrl.value = savedAiBaseUrl
+  aiReady.value = hasUsableAi(readStorage)
 }
 
 function loadMessages() {
@@ -312,19 +217,13 @@ function saveMessages() {
 }
 
 function showSettings() {
+  aiReady.value = hasUsableAi(readStorage)
   showApiKeyModal.value = true
 }
 
-function saveApiSettings() {
-  localStorage.setItem('use_gateway', useGateway.value.toString())
-  localStorage.setItem('gateway_url', gatewayUrl.value.trim())
-  localStorage.setItem('gateway_token', gatewayToken.value.trim())
-  localStorage.setItem('deepseek_api_key', apiKey.value.trim())
-  localStorage.setItem('ai_model', aiModel.value)
-  localStorage.setItem('ai_custom_model', customModelName.value.trim())
-  localStorage.setItem('ai_base_url', aiBaseUrl.value.trim())
+function goSettings() {
   showApiKeyModal.value = false
-  alert('设置已保存')
+  router.push('/settings')
 }
 
 function formatTime(date: Date | string): string {
@@ -356,19 +255,43 @@ async function handleSend() {
   scrollToBottom()
 
   try {
-    let rawReply: string
+    let parsed: StructuredReply | null = null
+    let content = ''
 
-    if (useGateway.value || apiKey.value) {
-      rawReply = await callDeepSeekAPI(text)
+    if (aiReady.value) {
+      const persona = personaStore.activePersona
+      const memoryInjection = persona
+        ? {
+            memory: persona.memory,
+            feedback: persona.feedback,
+            behaviorProfile: persona.behaviorProfile,
+          }
+        : undefined
+      const response = await callAI({
+        userMessage: text,
+        history: messages.value.slice(-6).map(m => ({
+          role: m.role,
+          content: m.content,
+        })),
+        userMbti: personaStore.userMbti || '未知',
+        complementMbti: persona?.complementMbti || '未知',
+        complementLevel: complementLevel.value,
+        isDecisionMode: checkDecisionRequest(text),
+        personaName: persona?.name || '互补伙伴',
+        memoryInjection,
+      })
+      parsed = response.structured || null
+      content = response.text
     } else {
-      rawReply = generateMockResponse(text)
+      content = generateMockResponse(text)
+      parsed = parseStructuredReply(content)
+      if (parsed && parsed.perspective === content) parsed = null
     }
     
-    const parsed = parseStructuredReply(rawReply)
     const aiMsg: Message = {
       id: (Date.now() + 1).toString(),
       role: 'assistant',
-      content: parsed ? (parsed.perspective || rawReply) : rawReply,
+      content,
       structured: parsed,
       timestamp: new Date(),
     }
@@ -394,7 +317,7 @@ async function handleSend() {
     const errorMsg: Message = {
       id: (Date.now() + 1).toString(),
       role: 'assistant',
-      content: '抱歉，AI 回复失败了。你可以稍后重试，或检查 API Key 设置。',
+      content: '抱歉，AI 回复失败了。你可以稍后重试，或检查设置中的 AI 服务配置。',
       timestamp: new Date(),
     }
     messages.value.push(errorMsg)
@@ -402,128 +325,6 @@ async function handleSend() {
   } finally {
     isTyping.value = false
     scrollToBottom()
-  }
-}
-
-async function callDeepSeekAPI(userMessage: string): Promise<string> {
-  const persona = personaStore.activePersona
-  const userMbti = personaStore.userMbti || '未知'
-  const complementMbti = persona?.complementMbti || '未知'
-  const complementLevelValue = complementLevel.value
-  const isDecisionMode = checkDecisionRequest(userMessage)
-
-  const memoryInjection = persona
-    ? {
-        memory: persona.memory,
-        feedback: persona.feedback,
-        behaviorProfile: persona.behaviorProfile,
-      }
-    : undefined
-
-  const systemPrompt = buildSystemPrompt(
-    userMbti,
-    complementMbti,
-    complementLevelValue,
-    isDecisionMode,
-    persona?.name || '互补伙伴',
-    memoryInjection
-  ) + '\n\n' + buildStructuredInstruction()
-
-  const history = messages.value.slice(-6).map(m => ({
-    role: m.role,
-    content: m.content,
-  }))
-
-  const requestMessages = [
-    { role: 'system', content: systemPrompt },
-    ...history,
-    { role: 'user', content: userMessage }
-  ]
-
-  // 模型配置：ai_model 存预设模型 id 或自定义标记；自定义模型走直连（网关不支持路由未知上游）
-  const isCustom = isCustomModel(aiModel.value)
-  const modelOpt = getModelOption(aiModel.value)
-  const requestModel = isCustom ? (customModelName.value.trim() || 'deepseek-chat') : aiModel.value
-  const useJsonMode = !isCustom && modelOpt.jsonMode
-
-  // 优先走网关（内置或自定义），密钥留在服务端
-  const gwUrl = gatewayUrl.value.trim() || BUILTIN_GATEWAY_URL
-  if (useGateway.value && gwUrl && !isCustom) {
-    const gwToken = gatewayToken.value.trim() || BUILTIN_GATEWAY_TOKEN
-    try {
-      const gwResponse = await fetch(gwUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(gwToken ? { Authorization: `Bearer ${gwToken}` } : {}),
-        },
-        body: JSON.stringify({
-          model: requestModel,
-          provider: modelOpt.provider,
-          jsonMode: useJsonMode,
-          messages: requestMessages,
-        }),
-      })
-      if (gwResponse.ok) {
-        const gwData = await gwResponse.json()
-        const gwBody = gwData.data || gwData
-        if (gwBody && gwBody.choices && gwBody.choices[0]) {
-          return gwBody.choices[0].message.content
-        }
-      }
-      console.warn('网关调用失败，回退直连:', gwResponse.status)
-    } catch (e) {
-      console.warn('网关调用异常，回退直连:', e)
-    }
-  }
-
-  // 回退：直连 API（模型支持 JSON mode 时附加 response_format）
-  const apiKeyValue = localStorage.getItem('deepseek_api_key')
-  if (!apiKeyValue) {
-    throw new Error('未配置 AI 服务：请在设置中启用内置网关，或填写你自己的 API Key')
-  }
-
-  const directBaseUrl = isCustom
-    ? (aiBaseUrl.value.trim() || 'https://api.deepseek.com/chat/completions')
-    : modelOpt.baseURL
-
-  const response = await fetch(directBaseUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKeyValue}`
-    },
-    body: JSON.stringify({
-      model: requestModel,
-      messages: requestMessages,
-      stream: false,
-      ...(useJsonMode ? { response_format: { type: 'json_object' } } : {}),
-    })
-  })
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    throw new Error(errorData.error?.message || `API 请求失败: ${response.status}`)
-  }
-
-  const data = await response.json()
-  return data.choices[0].message.content
-}
-
-function parseStructuredReply(raw: string): StructuredReply | null {
-  try {
-    const trimmed = raw.trim()
-    const jsonText = trimmed.startsWith('{') ? trimmed : trimmed.slice(trimmed.indexOf('{'))
-    const obj = JSON.parse(jsonText)
-    if (!obj || typeof obj !== 'object' || !obj.perspective) return null
-    return {
-      perspective: String(obj.perspective),
-      suggestions: Array.isArray(obj.suggestions) ? obj.suggestions.filter((s: unknown) => typeof s === 'string').map(String).slice(0, 4) : [],
-      followUpQuestion: typeof obj.followUpQuestion === 'string' ? obj.followUpQuestion : '',
-      memoryUpdates: obj.memoryUpdates || undefined,
-    }
-  } catch (error) {
-    return null
   }
 }
 
