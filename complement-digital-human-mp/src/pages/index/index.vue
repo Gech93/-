@@ -1189,13 +1189,27 @@ function handleStart() {
 }
 
 .mirror-1 .reflection-mouth {
-  width: 14rpx;
-  height: 5rpx;
+  width: 18rpx;
+  height: 12rpx;
   bottom: 25%;
   border: 3rpx solid var(--dopamine-text);
   border-top: none;
-  border-radius: 0 0 12rpx 12rpx;
-  transform: translateX(-50%) rotate(14deg);
+  border-radius: 0 0 16rpx 16rpx;
+  background: linear-gradient(180deg, rgba(45, 42, 62, 0.08) 0%, rgba(45, 42, 62, 0.25) 100%);
+  transform: translateX(-50%) rotate(12deg);
+}
+
+.mirror-1 .reflection-mouth::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -6rpx;
+  width: 9rpx;
+  height: 14rpx;
+  background: linear-gradient(180deg, #ffb0c9 0%, #ff6b9d 100%);
+  border-radius: 4rpx 4rpx 10rpx 10rpx;
+  transform: translateX(-50%);
+  box-shadow: 0 2rpx 4rpx rgba(255, 107, 157, 0.35);
 }
 
 .mirror-2 .reflection-mouth {
