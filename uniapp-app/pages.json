@@ -1,0 +1,100 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "互补数字人",
+        "navigationBarBackgroundColor": "#1E40AF",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/mbti/test",
+      "style": {
+        "navigationBarTitleText": "MBTI测试",
+        "navigationBarBackgroundColor": "#1E40AF",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/persona/index",
+      "style": {
+        "navigationBarTitleText": "人格档案",
+        "navigationBarBackgroundColor": "#1E40AF",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/persona/create",
+      "style": {
+        "navigationBarTitleText": "创建新人格",
+        "navigationBarBackgroundColor": "#8B5CF6",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/chat/index",
+      "style": {
+        "navigationBarTitleText": "对话",
+        "navigationBarBackgroundColor": "#1E40AF",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/chat/conversation",
+      "style": {
+        "navigationBarTitleText": "",
+        "navigationBarBackgroundColor": "#1E40AF",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/settings/index",
+      "style": {
+        "navigationBarTitleText": "设置",
+        "navigationBarBackgroundColor": "#1E40AF",
+        "navigationBarTextStyle": "white"
+      }
+    },
+    {
+      "path": "pages/settings/privacy",
+      "style": {
+        "navigationBarTitleText": "隐私设置",
+        "navigationBarBackgroundColor": "#1E40AF",
+        "navigationBarTextStyle": "white"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "互补数字人",
+    "navigationBarBackgroundColor": "#1E40AF",
+    "backgroundColor": "#F8F8F8"
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#1E40AF",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/persona/index",
+        "text": "人格",
+        "iconPath": "static/tab-persona.png",
+        "selectedIconPath": "static/tab-persona-active.png"
+      },
+      {
+        "pagePath": "pages/chat/index",
+        "text": "对话",
+        "iconPath": "static/tab-chat.png",
+        "selectedIconPath": "static/tab-chat-active.png"
+      },
+      {
+        "pagePath": "pages/settings/index",
+        "text": "设置",
+        "iconPath": "static/tab-settings.png",
+        "selectedIconPath": "static/tab-settings-active.png"
+      }
+    ]
+  }
+}

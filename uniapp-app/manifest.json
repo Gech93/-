@@ -1,0 +1,27 @@
+{
+  "name": "互补数字人",
+  "appid": "__UNI__COMPLEMENT",
+  "description": "与使用者人格互补的AI数字人",
+  "versionName": "1.0.0",
+  "versionCode": "100",
+  "transformPx": false,
+  "app-plus": {
+    "usingComponents": true
+  },
+  "mp-weixin": {
+    "appid": "wx0000000000000000",
+    "setting": {
+      "urlCheck": false,
+      "es6": true,
+      "postcss": true,
+      "minified": true
+    },
+    "requiredPrivateInfos": []
+  },
+  "h5": {
+    "router": {
+      "mode": "hash"
+    },
+    "title": "互补数字人"
+  }
+}
