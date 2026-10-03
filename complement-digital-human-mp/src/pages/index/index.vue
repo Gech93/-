@@ -1126,6 +1126,19 @@ function handleStart() {
   left: 58%;
 }
 
+.mirror-1 .reflection-eye::before {
+  content: '';
+  position: absolute;
+  left: -20rpx;
+  top: 55%;
+  width: 11rpx;
+  height: 5rpx;
+  border: 3rpx solid var(--dopamine-text);
+  border-top: none;
+  border-radius: 0 0 10rpx 10rpx;
+  transform: translate(-50%, -55%);
+}
+
 .mirror-2 .reflection-eye {
   right: 58%;
 }
@@ -1182,6 +1195,7 @@ function handleStart() {
   border: 3rpx solid var(--dopamine-text);
   border-top: none;
   border-radius: 0 0 12rpx 12rpx;
+  transform: translateX(-50%) rotate(14deg);
 }
 
 .mirror-2 .reflection-mouth {
