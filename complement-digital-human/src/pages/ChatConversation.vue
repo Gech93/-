@@ -148,6 +148,33 @@
           <p class="form-hint">从 platform.deepseek.com 获取 API Key</p>
         </div>
 
+        <div class="form-group">
+          <label class="form-label">AI 模型</label>
+          <select v-model="aiModel" class="form-input">
+            <option v-for="opt in MODEL_OPTIONS" :key="opt.id" :value="opt.id">{{ opt.label }}</option>
+            <option :value="CUSTOM_MODEL_ID">自定义模型（直连）</option>
+          </select>
+          <p class="form-hint">网关模式支持预设模型；自定义模型需关闭网关并填写 API Key 直连</p>
+        </div>
+
+        <div class="form-group" v-if="aiModel === CUSTOM_MODEL_ID">
+          <label class="form-label">自定义模型名称</label>
+          <input
+            v-model="customModelName"
+            class="form-input"
+            placeholder="如 qwen-plus / gpt-3.5-turbo"
+          />
+        </div>
+
+        <div class="form-group" v-if="aiModel === CUSTOM_MODEL_ID">
+          <label class="form-label">接口地址（OpenAI 兼容）</label>
+          <input
+            v-model="aiBaseUrl"
+            class="form-input"
+            placeholder="如 https://api.openai.com/v1/chat/completions"
+          />
+        </div>
+
         <div class="modal-actions">
           <button class="btn btn-cancel" @click="showApiKeyModal = false">取消</button>
           <button class="btn btn-save" @click="saveApiSettings">保存</button>
@@ -162,6 +189,7 @@ import { ref, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePersonaStore } from '../stores/persona'
 import { buildSystemPrompt, buildStructuredInstruction } from '../services/deepseek'
+import { MODEL_OPTIONS, CUSTOM_MODEL_ID, getModelOption, isCustomModel } from '../services/models'
 
 // ===== 开发者内置网关配置（开箱即用）=====
 // 部署网关服务后，将地址与令牌填入此处，用户无需任何配置即可使用 AI
@@ -207,6 +235,9 @@ const apiKey = ref('')
 const useGateway = ref(true)
 const gatewayUrl = ref('')
 const gatewayToken = ref('')
+const aiModel = ref('deepseek-chat')
+const customModelName = ref('')
+const aiBaseUrl = ref('')
 const remainDays = ref(0)
 
 // 获取存储键
@@ -237,6 +268,12 @@ function loadApiSettings() {
   if (savedGatewayUrl) gatewayUrl.value = savedGatewayUrl
   const savedGatewayToken = localStorage.getItem('gateway_token')
   if (savedGatewayToken) gatewayToken.value = savedGatewayToken
+  const savedAiModel = localStorage.getItem('ai_model')
+  if (savedAiModel) aiModel.value = savedAiModel
+  const savedCustomModelName = localStorage.getItem('ai_custom_model')
+  if (savedCustomModelName) customModelName.value = savedCustomModelName
+  const savedAiBaseUrl = localStorage.getItem('ai_base_url')
+  if (savedAiBaseUrl) aiBaseUrl.value = savedAiBaseUrl
 }
 
 function loadMessages() {
@@ -283,6 +320,9 @@ function saveApiSettings() {
   localStorage.setItem('gateway_url', gatewayUrl.value.trim())
   localStorage.setItem('gateway_token', gatewayToken.value.trim())
   localStorage.setItem('deepseek_api_key', apiKey.value.trim())
+  localStorage.setItem('ai_model', aiModel.value)
+  localStorage.setItem('ai_custom_model', customModelName.value.trim())
+  localStorage.setItem('ai_base_url', aiBaseUrl.value.trim())
   showApiKeyModal.value = false
   alert('设置已保存')
 }
@@ -400,9 +440,15 @@ async function callDeepSeekAPI(userMessage: string): Promise<string> {
     { role: 'user', content: userMessage }
   ]
 
+  // 模型配置：ai_model 存预设模型 id 或自定义标记；自定义模型走直连（网关不支持路由未知上游）
+  const isCustom = isCustomModel(aiModel.value)
+  const modelOpt = getModelOption(aiModel.value)
+  const requestModel = isCustom ? (customModelName.value.trim() || 'deepseek-chat') : aiModel.value
+  const useJsonMode = !isCustom && modelOpt.jsonMode
+
   // 优先走网关（内置或自定义），密钥留在服务端
   const gwUrl = gatewayUrl.value.trim() || BUILTIN_GATEWAY_URL
-  if (useGateway.value && gwUrl) {
+  if (useGateway.value && gwUrl && !isCustom) {
     const gwToken = gatewayToken.value.trim() || BUILTIN_GATEWAY_TOKEN
     try {
       const gwResponse = await fetch(gwUrl, {
@@ -411,7 +457,12 @@ async function callDeepSeekAPI(userMessage: string): Promise<string> {
           'Content-Type': 'application/json',
           ...(gwToken ? { Authorization: `Bearer ${gwToken}` } : {}),
         },
-        body: JSON.stringify({ model: 'deepseek-chat', messages: requestMessages }),
+        body: JSON.stringify({
+          model: requestModel,
+          provider: modelOpt.provider,
+          jsonMode: useJsonMode,
+          messages: requestMessages,
+        }),
       })
       if (gwResponse.ok) {
         const gwData = await gwResponse.json()
@@ -426,23 +477,27 @@ async function callDeepSeekAPI(userMessage: string): Promise<string> {
     }
   }
 
-  // 回退：直连 DeepSeek API
+  // 回退：直连 API（模型支持 JSON mode 时附加 response_format）
   const apiKeyValue = localStorage.getItem('deepseek_api_key')
   if (!apiKeyValue) {
     throw new Error('未配置 AI 服务：请在设置中启用内置网关，或填写你自己的 API Key')
   }
 
-  const response = await fetch('https://api.deepseek.com/chat/completions', {
+  const directBaseUrl = isCustom
+    ? (aiBaseUrl.value.trim() || 'https://api.deepseek.com/chat/completions')
+    : modelOpt.baseURL
+
+  const response = await fetch(directBaseUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKeyValue}`
     },
     body: JSON.stringify({
-      model: 'deepseek-chat',
+      model: requestModel,
       messages: requestMessages,
       stream: false,
-      response_format: { type: 'json_object' }
+      ...(useJsonMode ? { response_format: { type: 'json_object' } } : {}),
     })
   })
 

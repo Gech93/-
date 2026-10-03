@@ -1,5 +1,6 @@
 import { buildSystemPrompt, buildStructuredInstruction, type PromptContext } from './prompt'
 import { formatStructuredText, parseStructuredReply, type ChatResponse } from './structured'
+import { getModelOption, isCustomModel, CUSTOM_MODEL_ID } from './models'
 
 export interface ChatCompletionData {
   choices?: Array<{ message?: { content?: string } }>
@@ -67,12 +68,21 @@ export async function callDeepSeekAPI(params: CallDeepSeekParams): Promise<ChatR
     { role: 'user', content: userMessage },
   ]
 
+  // 模型配置：ai_model 存预设模型 id 或自定义标记；自定义模型走直连（网关不支持路由未知上游）
+  const modelSetting = (deps.getStorage('ai_model') as string) || 'deepseek-chat'
+  const isCustom = isCustomModel(modelSetting)
+  const customModelName = (deps.getStorage('ai_custom_model') as string) || ''
+  const customBaseUrl = (deps.getStorage('ai_base_url') as string) || ''
+  const modelOpt = getModelOption(modelSetting)
+  const requestModel = isCustom ? (customModelName || 'deepseek-chat') : modelSetting
+  const useJsonMode = !isCustom && modelOpt.jsonMode
+
   // 优先走云端网关（密钥留在服务端，客户端不暴露；携带访问令牌鉴权）
-  // 默认启用内置网关（开箱即用），用户未显式关闭时自动走网关
+  // 默认启用内置网关（开箱即用），用户未显式关闭时自动走网关；自定义模型跳过网关
   const useProxy = deps.getStorage('use_cloud_proxy') !== false
   const customGatewayUrl = (deps.getStorage('cloud_gateway_url') as string) || ''
   const gatewayUrl = customGatewayUrl || BUILTIN_GATEWAY_URL
-  if (useProxy && gatewayUrl) {
+  if (useProxy && gatewayUrl && !isCustom) {
     const gatewayToken = (deps.getStorage('cloud_gateway_token') as string) || BUILTIN_GATEWAY_TOKEN
     try {
       const proxyRes = await deps.request({
@@ -82,7 +92,12 @@ export async function callDeepSeekAPI(params: CallDeepSeekParams): Promise<ChatR
           'Content-Type': 'application/json',
           ...(gatewayToken ? { Authorization: `Bearer ${gatewayToken}` } : {}),
         },
-        data: { model: 'deepseek-chat', messages: requestMessages },
+        data: {
+          model: requestModel,
+          provider: modelOpt.provider,
+          jsonMode: useJsonMode,
+          messages: requestMessages,
+        },
         timeout: 30000,
       })
       const body = proxyRes.data as GatewayResponse
@@ -102,18 +117,20 @@ export async function callDeepSeekAPI(params: CallDeepSeekParams): Promise<ChatR
     throw new Error('未设置 API Key')
   }
 
+  const directBaseUrl = isCustom ? (customBaseUrl || 'https://api.deepseek.com/chat/completions') : modelOpt.baseURL
+
   const response = await deps.request({
-    url: 'https://api.deepseek.com/chat/completions',
+    url: directBaseUrl,
     method: 'POST',
     header: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${apiKeyValue}`
     },
     data: {
-      model: 'deepseek-chat',
+      model: requestModel,
       messages: requestMessages,
       stream: false,
-      response_format: { type: 'json_object' }
+      ...(useJsonMode ? { response_format: { type: 'json_object' } } : {}),
     },
     timeout: 30000,
   })

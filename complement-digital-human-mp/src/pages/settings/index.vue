@@ -84,6 +84,39 @@
         />
       </view>
 
+      <view class="setting-item column">
+        <text class="setting-label">AI 模型</text>
+        <picker
+          mode="selector"
+          :range="modelLabels"
+          :value="modelIndex"
+          @change="onModelChange"
+        >
+          <view class="setting-input model-picker">{{ modelLabels[modelIndex] }}</view>
+        </picker>
+        <text class="setting-hint">网关模式支持预设模型；自定义模型需关闭网关并填写 API Key 直连</text>
+      </view>
+
+      <view class="setting-item column" v-if="aiModel === CUSTOM_MODEL_ID">
+        <text class="setting-label">自定义模型名称</text>
+        <input
+          v-model="customModelName"
+          class="setting-input"
+          placeholder="如 qwen-plus / gpt-3.5-turbo"
+          @blur="saveCustomModelName"
+        />
+      </view>
+
+      <view class="setting-item column" v-if="aiModel === CUSTOM_MODEL_ID">
+        <text class="setting-label">接口地址（OpenAI 兼容）</text>
+        <input
+          v-model="aiBaseUrl"
+          class="setting-input"
+          placeholder="如 https://api.openai.com/v1/chat/completions"
+          @blur="saveAiBaseUrl"
+        />
+      </view>
+
       <view class="setting-item column" v-if="!useCloudProxy">
         <text class="setting-label">DeepSeek API Key</text>
         <input
@@ -130,6 +163,7 @@ import { ref } from 'vue'
 import { usePersonaStore } from '../../stores/persona'
 import { buildBackupJson, importBackupJson, clearAllConversations } from '../../utils/backup'
 import { readStorage, writeStorage, STORAGE_KEYS } from '../../utils/storage'
+import { MODEL_OPTIONS, CUSTOM_MODEL_ID } from '../../pages/chat-conversation/modules/models'
 import manifest from '../../manifest.json'
 
 const personaStore = usePersonaStore()
@@ -140,6 +174,39 @@ const useCloudProxy = ref(readStorage(STORAGE_KEYS.useCloudProxy) !== false)
 const gatewayUrl = ref((readStorage<string>(STORAGE_KEYS.cloudGatewayUrl) as string) || '')
 const gatewayToken = ref((readStorage<string>(STORAGE_KEYS.cloudGatewayToken) as string) || '')
 const apiKey = ref((readStorage<string>(STORAGE_KEYS.deepseekApiKey) as string) || '')
+
+const aiModel = ref((readStorage<string>(STORAGE_KEYS.aiModel) as string) || 'deepseek-chat')
+const customModelName = ref((readStorage<string>(STORAGE_KEYS.aiCustomModel) as string) || '')
+const aiBaseUrl = ref((readStorage<string>(STORAGE_KEYS.aiBaseUrl) as string) || '')
+
+const modelLabels = MODEL_OPTIONS.map(m => m.label).concat('自定义模型（直连）')
+const modelIndex = modelLabels.indexOf(
+  MODEL_OPTIONS.find(m => m.id === aiModel.value)?.label || modelLabels[modelLabels.length - 1]
+) === -1
+  ? modelLabels.length - 1
+  : Math.max(0, MODEL_OPTIONS.findIndex(m => m.id === aiModel.value))
+
+function onModelChange(e: Event) {
+  const detail = (e as unknown as { detail?: { value?: number } }).detail
+  const idx = detail?.value ?? 0
+  const opt = idx >= 0 && idx < MODEL_OPTIONS.length ? MODEL_OPTIONS[idx] : null
+  aiModel.value = opt ? opt.id : CUSTOM_MODEL_ID
+  writeStorage(STORAGE_KEYS.aiModel, aiModel.value)
+  uni.showToast({
+    title: `已切换模型: ${modelLabels[idx]}`,
+    icon: 'none'
+  })
+}
+
+function saveCustomModelName() {
+  writeStorage(STORAGE_KEYS.aiCustomModel, customModelName.value.trim())
+  uni.showToast({ title: '模型名称已保存', icon: 'none' })
+}
+
+function saveAiBaseUrl() {
+  writeStorage(STORAGE_KEYS.aiBaseUrl, aiBaseUrl.value.trim())
+  uni.showToast({ title: '接口地址已保存', icon: 'none' })
+}
 
 function toggleCloudProxy(e: Event) {
   const detail = (e as unknown as { detail?: { value?: boolean } }).detail
@@ -409,6 +476,14 @@ function goToPersona() {
   border-radius: 16rpx;
   padding: 0 24rpx;
   font-size: 28rpx;
+}
+
+.model-picker {
+  display: flex;
+  align-items: center;
+  height: 72rpx;
+  line-height: 72rpx;
+  color: var(--dopamine-text);
 }
 
 .setting-label {

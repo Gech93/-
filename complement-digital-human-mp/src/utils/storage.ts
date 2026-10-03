@@ -5,6 +5,9 @@ export const STORAGE_KEYS = {
   cloudGatewayUrl: 'cloud_gateway_url',
   cloudGatewayToken: 'cloud_gateway_token',
   useCloudProxy: 'use_cloud_proxy',
+  aiModel: 'ai_model',
+  aiCustomModel: 'ai_custom_model',
+  aiBaseUrl: 'ai_base_url',
 } as const
 
 export function readStorage<T>(key: string): T | null {

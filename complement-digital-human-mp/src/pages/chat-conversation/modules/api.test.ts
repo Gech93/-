@@ -166,4 +166,86 @@ describe('callDeepSeekAPI', () => {
       callDeepSeekAPI({ userMessage: 'hi', ctx: makeCtx(), history: [], deps })
     ).rejects.toThrow('API 请求失败: 429')
   })
+
+  it('预设模型走网关时透传 provider 与 jsonMode', async () => {
+    const request = vi.fn()
+    const deps = makeDeps({
+      request: request as ApiDeps['request'],
+      getStorage: makeGetter({
+        use_cloud_proxy: true,
+        cloud_gateway_url: 'https://gateway.example.com/chat',
+        ai_model: 'gpt-4o-mini',
+      }),
+    })
+    const mock = request as ReturnType<typeof vi.fn>
+    mock.mockResolvedValueOnce({ statusCode: 200, data: { code: 0, data: { choices: [{ message: { content } }] } } })
+
+    await callDeepSeekAPI({ userMessage: '最近压力很大', ctx: makeCtx(), history: [], deps })
+
+    const call = (mock.mock.calls[0] as [RequestOptions])[0]
+    expect(call.data).toMatchObject({ model: 'gpt-4o-mini', provider: 'openai', jsonMode: true })
+  })
+
+  it('推理类模型（deepseek-reasoner）直连时不携带 response_format', async () => {
+    const request = vi.fn()
+    const deps = makeDeps({
+      request: request as ApiDeps['request'],
+      getStorage: makeGetter({
+        deepseek_api_key: 'sk-test',
+        ai_model: 'deepseek-reasoner',
+      }),
+    })
+    const mock = request as ReturnType<typeof vi.fn>
+    mock.mockResolvedValueOnce({ statusCode: 200, data: { choices: [{ message: { content } }] } })
+
+    await callDeepSeekAPI({ userMessage: 'hi', ctx: makeCtx(), history: [], deps })
+
+    const call = (mock.mock.calls[0] as [RequestOptions])[0]
+    expect(call.data).toMatchObject({ model: 'deepseek-reasoner', stream: false })
+    expect(call.data).not.toHaveProperty('response_format')
+  })
+
+  it('自定义模型即使启用网关也跳过网关直接请求自定义接口', async () => {
+    const request = vi.fn()
+    const deps = makeDeps({
+      request: request as ApiDeps['request'],
+      getStorage: makeGetter({
+        use_cloud_proxy: true,
+        cloud_gateway_url: 'https://gateway.example.com/chat',
+        deepseek_api_key: 'sk-test',
+        ai_model: '__custom__',
+        ai_custom_model: 'qwen-plus',
+        ai_base_url: 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation',
+      }),
+    })
+    const mock = request as ReturnType<typeof vi.fn>
+    mock.mockResolvedValueOnce({ statusCode: 200, data: { choices: [{ message: { content } }] } })
+
+    await callDeepSeekAPI({ userMessage: 'hi', ctx: makeCtx(), history: [], deps })
+
+    expect(mock).toHaveBeenCalledTimes(1)
+    const call = (mock.mock.calls[0] as [RequestOptions])[0]
+    expect(call.url).toBe('https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation')
+    expect(call.header.Authorization).toBe('Bearer sk-test')
+    expect(call.data).toMatchObject({ model: 'qwen-plus', stream: false })
+  })
+
+  it('自定义模型未填模型名与接口地址时回退 DeepSeek 默认值', async () => {
+    const request = vi.fn()
+    const deps = makeDeps({
+      request: request as ApiDeps['request'],
+      getStorage: makeGetter({
+        deepseek_api_key: 'sk-test',
+        ai_model: '__custom__',
+      }),
+    })
+    const mock = request as ReturnType<typeof vi.fn>
+    mock.mockResolvedValueOnce({ statusCode: 200, data: { choices: [{ message: { content } }] } })
+
+    await callDeepSeekAPI({ userMessage: 'hi', ctx: makeCtx(), history: [], deps })
+
+    const call = (mock.mock.calls[0] as [RequestOptions])[0]
+    expect(call.url).toBe('https://api.deepseek.com/chat/completions')
+    expect(call.data).toMatchObject({ model: 'deepseek-chat', stream: false })
+  })
 })

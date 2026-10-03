@@ -44,11 +44,11 @@ export interface MemoryInjection {
 export async function callDeepSeekAPI(
   apiKey: string,
   messages: Message[],
-  options?: { temperature?: number; maxTokens?: number; jsonMode?: boolean }
+  options?: { temperature?: number; maxTokens?: number; jsonMode?: boolean; model?: string; baseURL?: string }
 ): Promise<string> {
   try {
     const requestBody: DeepSeekRequest = {
-      model: 'deepseek-chat',
+      model: options?.model || 'deepseek-chat',
       messages,
       temperature: options?.temperature ?? 0.7,
       max_tokens: options?.maxTokens ?? 2000,
@@ -57,7 +57,7 @@ export async function callDeepSeekAPI(
       requestBody.response_format = { type: 'json_object' }
     }
 
-    const response = await fetch(DEEPSEEK_API_URL, {
+    const response = await fetch(options?.baseURL || DEEPSEEK_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
