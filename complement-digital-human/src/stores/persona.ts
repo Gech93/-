@@ -236,11 +236,7 @@ export const usePersonaStore = defineStore('persona', () => {
     if (!persona) return false
 
     const now = new Date()
-    const nextModify = new Date(persona.nextModifyTime)
-
-    if (now < nextModify) {
-      const remainingDays = Math.ceil((nextModify.getTime() - now.getTime()) / (24 * 60 * 60 * 1000))
-      console.log(`距离下次可修改还有 ${remainingDays} 天`)
+    if (!canModifyComplement(persona)) {
       return false
     }
 
@@ -268,6 +264,13 @@ export const usePersonaStore = defineStore('persona', () => {
   function canModifyComplement(persona: Persona): boolean {
     const now = new Date()
     const nextModify = new Date(persona.nextModifyTime)
+    const COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000
+    const remainingMs = nextModify.getTime() - now.getTime()
+    if (remainingMs > COOLDOWN_MS) {
+      // 存量用户旧 30 天冷却迁移：等价于 lastModified + 7 天
+      const effectiveNext = nextModify.getTime() - (30 * 24 * 60 * 60 * 1000 - COOLDOWN_MS)
+      return now.getTime() >= effectiveNext
+    }
     return now >= nextModify
   }
 
@@ -275,7 +278,9 @@ export const usePersonaStore = defineStore('persona', () => {
   function getRemainDays(persona: Persona): number {
     const now = new Date()
     const nextModify = new Date(persona.nextModifyTime)
-    return Math.max(0, Math.ceil((nextModify.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)))
+    const remain = Math.max(0, Math.ceil((nextModify.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)))
+    // 封顶到当前冷却天数（7天），存量用户旧 30 天冷却自动迁移
+    return Math.min(remain, 7)
   }
 
   // 保存到本地存储

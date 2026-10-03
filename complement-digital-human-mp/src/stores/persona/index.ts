@@ -231,13 +231,11 @@ function createStore() {
     if (!persona) return false
 
     const now = new Date()
-    const nextModify = new Date(persona.nextModifyTime)
-
-    if (now < nextModify) {
+    if (!canModifyComplement(persona)) {
       return false
     }
 
-    const nextMonth = new Date(now.getTime() + COMPLEMENT_COOLDOWN_MS)
+    const nextTime = new Date(now.getTime() + COMPLEMENT_COOLDOWN_MS)
     persona.complementLevel = level
     persona.complementMbti = calculateComplementMbti(persona.mbtiType, level, persona.mbtiScores)
     persona.complementBigFive = calculateComplementBigFive(
@@ -246,7 +244,7 @@ function createStore() {
       { mbtiType: persona.mbtiType, mbtiScores: persona.mbtiScores },
       bigFiveProfile.value?.confidence ?? 100
     )
-    persona.nextModifyTime = nextMonth.toISOString()
+    persona.nextModifyTime = nextTime.toISOString()
     saveToStorage()
 
     return true
@@ -266,13 +264,21 @@ function createStore() {
   function canModifyComplement(persona: Persona): boolean {
     const now = new Date()
     const nextModify = new Date(persona.nextModifyTime)
+    const remainingMs = nextModify.getTime() - now.getTime()
+    if (remainingMs > COMPLEMENT_COOLDOWN_MS) {
+      // 存量用户旧 30 天冷却迁移：等价于 lastModified + 7 天
+      const effectiveNext = nextModify.getTime() - (30 * DAY_MS - COMPLEMENT_COOLDOWN_MS)
+      return now.getTime() >= effectiveNext
+    }
     return now >= nextModify
   }
 
   function getRemainDays(persona: Persona): number {
     const now = new Date()
     const nextModify = new Date(persona.nextModifyTime)
-    return Math.max(0, Math.ceil((nextModify.getTime() - now.getTime()) / DAY_MS))
+    const remain = Math.max(0, Math.ceil((nextModify.getTime() - now.getTime()) / DAY_MS))
+    // 封顶到当前冷却天数，存量用户旧 30 天冷却自动迁移为 7 天
+    return Math.min(remain, COMPLEMENT_COOLDOWN_DAYS)
   }
 
   function addUserFact(fact: string) {
