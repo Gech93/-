@@ -13,6 +13,7 @@ export const MODEL_OPTIONS: ModelOption[] = [
   { id: 'deepseek-reasoner', label: 'DeepSeek-R1（deepseek-reasoner）', provider: 'deepseek', baseURL: 'https://api.deepseek.com/chat/completions', jsonMode: false },
   { id: 'gpt-4o-mini', label: 'OpenAI GPT-4o-mini', provider: 'openai', baseURL: 'https://api.openai.com/v1/chat/completions', jsonMode: true },
   { id: 'moonshot-v1-8k', label: 'Kimi（moonshot-v1-8k）', provider: 'moonshot', baseURL: 'https://api.moonshot.cn/v1/chat/completions', jsonMode: true },
+  { id: 'glm-4-plus', label: '智谱 GLM-4-Plus', provider: 'zhipu', baseURL: 'https://open.bigmodel.cn/api/paas/v4/chat/completions', jsonMode: true },
 ]
 
 export function getModelOption(id: string): ModelOption {

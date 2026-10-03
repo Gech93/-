@@ -37,6 +37,13 @@ export const MODEL_OPTIONS: ModelOption[] = [
     baseURL: 'https://api.moonshot.cn/v1/chat/completions',
     jsonMode: true,
   },
+  {
+    id: 'glm-4-plus',
+    label: '智谱 GLM-4-Plus',
+    provider: 'zhipu',
+    baseURL: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+    jsonMode: true,
+  },
 ]
 
 export function getModelOption(id: string): ModelOption {
