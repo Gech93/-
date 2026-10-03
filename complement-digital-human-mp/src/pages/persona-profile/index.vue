@@ -10,17 +10,33 @@
         <text class="hero-tag" v-for="tag in persona.tags" :key="tag">{{ tag }}</text>
       </view>
       <view class="hero-meta">
-        <text class="hero-meta-item">成长 Lv.{{ persona.growthLevel }}</text>
         <text class="hero-meta-item">对话 {{ persona.totalConversations }} 次</text>
         <text class="hero-meta-item">陪伴 {{ companionDays }} 天</text>
+        <text class="hero-meta-item">记忆 {{ memoryCount }} 条</text>
       </view>
-      <view class="growth-block">
-        <view class="growth-track">
-          <view class="growth-fill" :style="{ width: growthProgress + '%' }"></view>
-        </view>
-        <text class="growth-text" v-if="persona.growthLevel < 10">距 Lv.{{ persona.growthLevel + 1 }} 还差 {{ nextLevelGap }} 次对话</text>
-        <text class="growth-text" v-else>已达最高等级 Lv.10，感谢长久陪伴</text>
+    </view>
+
+    <view class="section-card" v-if="persona.behaviorProfile">
+      <text class="section-title">记忆档案</text>
+      <text class="section-desc">AI 对你的理解会随对话不断深化，换一个数字人就要从零开始</text>
+      <view class="profile-row">
+        <text class="profile-label">情绪倾向</text>
+        <text class="profile-value">{{ persona.behaviorProfile.emotionTendency }}</text>
       </view>
+      <view class="profile-row">
+        <text class="profile-label">决策风格</text>
+        <text class="profile-value">{{ persona.behaviorProfile.decisionStyle }}</text>
+      </view>
+      <view class="profile-row">
+        <text class="profile-label">表达风格</text>
+        <text class="profile-value">{{ persona.behaviorProfile.expressionStyle }}</text>
+      </view>
+      <view class="profile-row">
+        <text class="profile-label">深层需求</text>
+        <text class="profile-value">{{ persona.behaviorProfile.deepNeed }}</text>
+      </view>
+      <text class="profile-hint" v-if="persona.behaviorProfile.updateCount > 0">已根据你的对话更新 {{ persona.behaviorProfile.updateCount }} 次</text>
+      <text class="profile-hint" v-else>还没有对话记录，去聊几句让 AI 开始了解你</text>
     </view>
 
     <view class="section-card">
@@ -193,14 +209,12 @@ const companionDays = computed(() => {
   return Math.max(1, Math.ceil((now.getTime() - created.getTime()) / (24 * 60 * 60 * 1000)))
 })
 
-const growthProgress = computed(() => {
-  const total = persona.value?.totalConversations ?? 0
-  return Math.min(100, Math.round(((total % 10) / 10) * 100))
-})
-
-const nextLevelGap = computed(() => {
-  const total = persona.value?.totalConversations ?? 0
-  return 10 - (total % 10)
+const memoryCount = computed(() => {
+  const p = persona.value
+  if (!p) return 0
+  const facts = p.memory?.facts?.length || 0
+  const userFacts = p.memory?.userFacts?.length || 0
+  return facts + userFacts
 })
 
 const usefulMemories = computed(() =>
@@ -330,30 +344,35 @@ function goBack() {
   color: rgba(255, 255, 255, 0.8);
 }
 
-.growth-block {
-  margin-top: 32rpx;
+.profile-row {
+  display: flex;
+  padding: 20rpx 0;
+  border-bottom: 2rpx solid var(--dopamine-border);
 }
 
-.growth-track {
-  width: 100%;
-  height: 16rpx;
-  background: rgba(255, 255, 255, 0.25);
-  border-radius: 8rpx;
-  overflow: hidden;
+.profile-row:last-child {
+  border-bottom: none;
 }
 
-.growth-fill {
-  height: 100%;
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 8rpx;
-  transition: width 0.3s;
+.profile-label {
+  width: 160rpx;
+  font-size: 28rpx;
+  color: var(--dopamine-text-sub);
+  flex-shrink: 0;
 }
 
-.growth-text {
+.profile-value {
+  flex: 1;
+  font-size: 28rpx;
+  color: var(--dopamine-text);
+}
+
+.profile-hint {
   display: block;
-  margin-top: 16rpx;
+  margin-top: 20rpx;
   font-size: 24rpx;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--dopamine-text-sub);
+  line-height: 1.5;
 }
 
 .section-card {

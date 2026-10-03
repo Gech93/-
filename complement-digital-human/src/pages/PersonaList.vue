@@ -60,17 +60,14 @@
             <span class="stat-label">陪伴天数</span>
           </div>
           <div class="stat-item">
-            <span class="stat-value">Lv.{{ persona.growthLevel }}</span>
-            <span class="stat-label">成长等级</span>
+            <span class="stat-value">{{ memoryCount(persona) }}</span>
+            <span class="stat-label">记忆条目</span>
           </div>
         </div>
 
-        <div class="growth-block">
-          <div class="growth-track">
-            <div class="growth-fill" :style="{ width: growthProgress(persona) + '%' }"></div>
-          </div>
-          <span class="growth-text" v-if="persona.growthLevel < 10">距 Lv.{{ persona.growthLevel + 1 }} 还差 {{ nextLevelGap(persona) }} 次对话</span>
-          <span class="growth-text" v-else>已达最高等级 Lv.10</span>
+        <div class="behavior-summary" v-if="persona.behaviorProfile && persona.behaviorProfile.updateCount > 0">
+          <span class="behavior-tag">情绪：{{ persona.behaviorProfile.emotionTendency }}</span>
+          <span class="behavior-tag">决策：{{ persona.behaviorProfile.decisionStyle }}</span>
         </div>
 
         <div class="persona-actions">
@@ -146,12 +143,10 @@ function companionDays(persona: any): number {
   return Math.max(1, Math.ceil((now.getTime() - created.getTime()) / (24 * 60 * 60 * 1000)))
 }
 
-function growthProgress(persona: any): number {
-  return Math.min(100, Math.round(((persona.totalConversations % 10) / 10) * 100))
-}
-
-function nextLevelGap(persona: any): number {
-  return 10 - (persona.totalConversations % 10)
+function memoryCount(persona: any): number {
+  const facts = persona.memory?.facts?.length || 0
+  const userFacts = persona.memory?.userFacts?.length || 0
+  return facts + userFacts
 }
 </script>
 
@@ -351,31 +346,20 @@ function nextLevelGap(persona: any): number {
   color: #999999;
 }
 
-.growth-block {
-  padding: 0 4px 20px 4px;
+.behavior-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 0 16px 0;
 }
 
-.growth-track {
-  width: 100%;
-  height: 8px;
-  background: #f0f0f0;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.growth-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-  border-radius: 4px;
-  transition: width 0.3s;
-}
-
-.growth-text {
-  display: block;
-  margin-top: 8px;
+.behavior-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  background: rgba(102, 126, 234, 0.08);
+  color: #667eea;
+  border-radius: 12px;
   font-size: 12px;
-  color: #999999;
-  text-align: center;
 }
 
 .persona-actions {
