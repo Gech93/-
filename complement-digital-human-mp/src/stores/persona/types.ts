@@ -1,8 +1,8 @@
 export const mbtiQuestions = [
   { id: 1, dimension: 'EI', question: '你更倾向于：', options: ['从与他人的互动中获得能量', '从独处中获得能量'] },
-  { id: 2, dimension: 'EI', question: '在社交场合中，你通常：', options: ['主动参与并发起对话', '等待别人先和你说话'] },
-  { id: 3, dimension: 'EI', question: '周末你更愿意：', options: ['和朋友聚会或参加活动', '在家安静休息'] },
-  { id: 4, dimension: 'EI', question: '和很多人在一起后，你会感到：', options: ['精力充沛，心情愉悦', '疲惫，需要独处恢复'] },
+  { id: 2, dimension: 'EI', question: '在社交场合中，你更倾向于：', options: ['主动开启对话、带动气氛', '等别人先开口、顺势加入'] },
+  { id: 3, dimension: 'EI', question: '如果周末完全由你安排，哪种方式更能让你恢复精力？', options: ['和朋友聚会、热热闹闹地玩', '在家安静休息、独处放松'] },
+  { id: 4, dimension: 'EI', question: '长时间待在热闹的人群中后，你的感受更接近：', options: ['被充电了，越聊越有精神', '被耗尽了，想一个人静静'] },
 
   { id: 5, dimension: 'SN', question: '在接收信息时，你更关注：', options: ['具体的事实和细节', '整体的模式和可能性'] },
   { id: 6, dimension: 'SN', question: '你觉得更可靠的是：', options: ['经验和已经验证的事实', '直觉和灵感'] },

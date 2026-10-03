@@ -33,7 +33,7 @@
     <view class="bottom-actions">
       <button
         class="next-btn"
-        :disabled="currentAnswer === null"
+        :disabled="currentAnswer == null"
         @click="handleNext"
       >
         {{ isLastQuestion ? '完成测试' : '下一题' }}
@@ -112,6 +112,13 @@ function describeBigFiveProfile(): string {
 }
 
 function handleNext() {
+  if (currentAnswer.value == null) {
+    uni.showToast({
+      title: '请先选择一个选项',
+      icon: 'none'
+    })
+    return
+  }
   if (isLastQuestion.value) {
     if (isBigFiveMode.value) {
       personaStore.completeBigFiveTest()
