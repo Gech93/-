@@ -103,41 +103,54 @@
       </div>
     </div>
 
-    <!-- API Key 设置弹窗 -->
+    <!-- AI 服务设置弹窗 -->
     <div class="modal-overlay" v-if="showApiKeyModal" @click="showApiKeyModal = false">
       <div class="modal-content" @click.stop>
-        <h3 class="modal-title">设置 DeepSeek API Key</h3>
-        
+        <h3 class="modal-title">AI 服务设置</h3>
+
         <div class="form-group">
-          <label class="form-label">API Key</label>
+          <label class="form-label">
+            <input type="checkbox" v-model="useGateway" />
+            使用内置 AI 网关
+          </label>
+          <p class="form-hint" v-if="useGateway">内置网关已启用，无需配置即可使用 AI 对话</p>
+          <p class="form-hint" v-else>已关闭网关，请在下方填写你自己的 API Key</p>
+        </div>
+
+        <div class="form-group" v-if="useGateway">
+          <label class="form-label">自定义网关地址（可选）</label>
+          <input
+            v-model="gatewayUrl"
+            class="form-input"
+            placeholder="留空则使用内置网关"
+          />
+          <p class="form-hint">如需使用自建网关，请填写地址</p>
+        </div>
+
+        <div class="form-group" v-if="useGateway">
+          <label class="form-label">自定义网关令牌（可选）</label>
+          <input
+            v-model="gatewayToken"
+            class="form-input"
+            placeholder="留空则使用内置令牌"
+            type="password"
+          />
+        </div>
+
+        <div class="form-group" v-if="!useGateway">
+          <label class="form-label">DeepSeek API Key</label>
           <input
             v-model="apiKey"
             class="form-input"
             placeholder="输入你的 DeepSeek API Key"
             type="password"
           />
-          <p class="form-hint">从 DeepSeek 平台获取 API Key</p>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label">
-            <input type="checkbox" v-model="useDeepSeek" />
-            启用 DeepSeek AI
-          </label>
+          <p class="form-hint">从 platform.deepseek.com 获取 API Key</p>
         </div>
 
         <div class="modal-actions">
           <button class="btn btn-cancel" @click="showApiKeyModal = false">取消</button>
-          <button class="btn btn-save" @click="saveApiKey">保存</button>
-        </div>
-
-        <div class="api-info">
-          <p>获取 API Key：</p>
-          <ol>
-            <li>访问 <a href="https://platform.deepseek.com/" target="_blank">DeepSeek 开放平台</a></li>
-            <li>注册并登录账号</li>
-            <li>创建 API Key 并复制</li>
-          </ol>
+          <button class="btn btn-save" @click="saveApiSettings">保存</button>
         </div>
       </div>
     </div>
@@ -150,6 +163,10 @@ import { useRouter } from 'vue-router'
 import { usePersonaStore } from '../stores/persona'
 import { buildSystemPrompt, buildStructuredInstruction } from '../services/deepseek'
 
+// ===== 开发者内置网关配置（开箱即用）=====
+// 部署网关服务后，将地址与令牌填入此处，用户无需任何配置即可使用 AI
+const BUILTIN_GATEWAY_URL = '' // 例: 'https://your-gateway.example.com/chat'
+const BUILTIN_GATEWAY_TOKEN = '' // 网关访问令牌
 interface StructuredReply {
   perspective: string
   suggestions: string[]
@@ -187,7 +204,9 @@ const personaMbti = ref('AI')
 
 const showApiKeyModal = ref(false)
 const apiKey = ref('')
-const useDeepSeek = ref(false)
+const useGateway = ref(true)
+const gatewayUrl = ref('')
+const gatewayToken = ref('')
 const remainDays = ref(0)
 
 // 获取存储键
@@ -211,12 +230,13 @@ onMounted(() => {
 
 function loadApiSettings() {
   const savedKey = localStorage.getItem('deepseek_api_key')
-  const savedUseDeepSeek = localStorage.getItem('use_deepseek')
-  
-  if (savedKey) {
-    apiKey.value = savedKey
-    useDeepSeek.value = savedUseDeepSeek === 'true'
-  }
+  if (savedKey) apiKey.value = savedKey
+  const savedUseGateway = localStorage.getItem('use_gateway')
+  useGateway.value = savedUseGateway !== 'false'
+  const savedGatewayUrl = localStorage.getItem('gateway_url')
+  if (savedGatewayUrl) gatewayUrl.value = savedGatewayUrl
+  const savedGatewayToken = localStorage.getItem('gateway_token')
+  if (savedGatewayToken) gatewayToken.value = savedGatewayToken
 }
 
 function loadMessages() {
@@ -258,16 +278,13 @@ function showSettings() {
   showApiKeyModal.value = true
 }
 
-function saveApiKey() {
-  if (!apiKey.value.trim()) {
-    alert('请输入 API Key')
-    return
-  }
-  
+function saveApiSettings() {
+  localStorage.setItem('use_gateway', useGateway.value.toString())
+  localStorage.setItem('gateway_url', gatewayUrl.value.trim())
+  localStorage.setItem('gateway_token', gatewayToken.value.trim())
   localStorage.setItem('deepseek_api_key', apiKey.value.trim())
-  localStorage.setItem('use_deepseek', useDeepSeek.value.toString())
   showApiKeyModal.value = false
-  alert('设置已保存！')
+  alert('设置已保存')
 }
 
 function formatTime(date: Date | string): string {
@@ -300,8 +317,8 @@ async function handleSend() {
 
   try {
     let rawReply: string
-    
-    if (useDeepSeek.value && apiKey.value) {
+
+    if (useGateway.value || apiKey.value) {
       rawReply = await callDeepSeekAPI(text)
     } else {
       rawReply = generateMockResponse(text)
@@ -349,12 +366,6 @@ async function handleSend() {
 }
 
 async function callDeepSeekAPI(userMessage: string): Promise<string> {
-  const apiKeyValue = localStorage.getItem('deepseek_api_key')
-  
-  if (!apiKeyValue) {
-    throw new Error('未设置 API Key')
-  }
-
   const persona = personaStore.activePersona
   const userMbti = personaStore.userMbti || '未知'
   const complementMbti = persona?.complementMbti || '未知'
@@ -383,6 +394,44 @@ async function callDeepSeekAPI(userMessage: string): Promise<string> {
     content: m.content,
   }))
 
+  const requestMessages = [
+    { role: 'system', content: systemPrompt },
+    ...history,
+    { role: 'user', content: userMessage }
+  ]
+
+  // 优先走网关（内置或自定义），密钥留在服务端
+  const gwUrl = gatewayUrl.value.trim() || BUILTIN_GATEWAY_URL
+  if (useGateway.value && gwUrl) {
+    const gwToken = gatewayToken.value.trim() || BUILTIN_GATEWAY_TOKEN
+    try {
+      const gwResponse = await fetch(gwUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(gwToken ? { Authorization: `Bearer ${gwToken}` } : {}),
+        },
+        body: JSON.stringify({ model: 'deepseek-chat', messages: requestMessages }),
+      })
+      if (gwResponse.ok) {
+        const gwData = await gwResponse.json()
+        const gwBody = gwData.data || gwData
+        if (gwBody && gwBody.choices && gwBody.choices[0]) {
+          return gwBody.choices[0].message.content
+        }
+      }
+      console.warn('网关调用失败，回退直连:', gwResponse.status)
+    } catch (e) {
+      console.warn('网关调用异常，回退直连:', e)
+    }
+  }
+
+  // 回退：直连 DeepSeek API
+  const apiKeyValue = localStorage.getItem('deepseek_api_key')
+  if (!apiKeyValue) {
+    throw new Error('未配置 AI 服务：请在设置中启用内置网关，或填写你自己的 API Key')
+  }
+
   const response = await fetch('https://api.deepseek.com/chat/completions', {
     method: 'POST',
     headers: {
@@ -391,11 +440,7 @@ async function callDeepSeekAPI(userMessage: string): Promise<string> {
     },
     body: JSON.stringify({
       model: 'deepseek-chat',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        ...history,
-        { role: 'user', content: userMessage }
-      ],
+      messages: requestMessages,
       stream: false,
       response_format: { type: 'json_object' }
     })

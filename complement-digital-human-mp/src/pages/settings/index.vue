@@ -49,32 +49,51 @@
       <text class="group-title">AI 服务</text>
 
       <view class="setting-item">
-        <text class="setting-label">使用云端网关</text>
+        <text class="setting-label">使用内置 AI 网关</text>
         <switch :checked="useCloudProxy" @change="toggleCloudProxy" color="#ff6b9d" />
       </view>
-      <view class="setting-hint">开启后，AI 请求将经你的 uniCloud 云函数转发，API Key 不再暴露在客户端；网关已启用令牌鉴权防滥用</view>
+      <view class="setting-hint" v-if="useCloudProxy && !gatewayUrl">
+        内置网关已启用，无需任何配置即可使用 AI 对话能力
+      </view>
+      <view class="setting-hint" v-else-if="useCloudProxy && gatewayUrl">
+        正在使用你配置的自定义网关地址
+      </view>
+      <view class="setting-hint" v-else>
+        已关闭网关，请在下方填写你自己的 DeepSeek API Key
+      </view>
 
-      <view class="setting-item column">
-        <text class="setting-label">网关地址</text>
+      <view class="setting-item column" v-if="useCloudProxy">
+        <text class="setting-label">自定义网关地址（可选）</text>
         <input
           v-model="gatewayUrl"
           class="setting-input"
-          placeholder="https://xxx.next.bspapp.com/chat-gateway"
+          placeholder="留空则使用内置网关"
           @blur="saveGatewayUrl"
         />
-        <text class="setting-hint">在 uniCloud 控制台部署 chat-gateway 云函数，配置环境变量 DEEPSEEK_API_KEY 与 CHAT_GATEWAY_TOKEN，然后把云函数 URL 粘贴到这里</text>
+        <text class="setting-hint">如需使用自部署的 uniCloud 网关，请填写云函数 URL</text>
       </view>
 
-      <view class="setting-item column">
-        <text class="setting-label">网关令牌</text>
+      <view class="setting-item column" v-if="useCloudProxy">
+        <text class="setting-label">自定义网关令牌（可选）</text>
         <input
           v-model="gatewayToken"
           class="setting-input"
-          placeholder="与云函数 CHAT_GATEWAY_TOKEN 保持一致"
+          placeholder="留空则使用内置令牌"
           password
           @blur="saveGatewayToken"
         />
-        <text class="setting-hint">访问令牌用于鉴权，防止他人盗用你的网关与 AI 额度，请勿外传</text>
+      </view>
+
+      <view class="setting-item column" v-if="!useCloudProxy">
+        <text class="setting-label">DeepSeek API Key</text>
+        <input
+          v-model="apiKey"
+          class="setting-input"
+          placeholder="输入你的 DeepSeek API Key"
+          password
+          @blur="saveApiKey"
+        />
+        <text class="setting-hint">从 platform.deepseek.com 获取 API Key，填入后可直连 AI</text>
       </view>
     </view>
 
@@ -117,9 +136,10 @@ const personaStore = usePersonaStore()
 
 const appVersion = `v${manifest.versionName || '1.0.0'}`
 
-const useCloudProxy = ref(readStorage(STORAGE_KEYS.useCloudProxy) === true)
+const useCloudProxy = ref(readStorage(STORAGE_KEYS.useCloudProxy) !== false)
 const gatewayUrl = ref((readStorage<string>(STORAGE_KEYS.cloudGatewayUrl) as string) || '')
 const gatewayToken = ref((readStorage<string>(STORAGE_KEYS.cloudGatewayToken) as string) || '')
+const apiKey = ref((readStorage<string>(STORAGE_KEYS.deepseekApiKey) as string) || '')
 
 function toggleCloudProxy(e: Event) {
   const detail = (e as unknown as { detail?: { value?: boolean } }).detail
@@ -143,6 +163,14 @@ function saveGatewayToken() {
   writeStorage(STORAGE_KEYS.cloudGatewayToken, gatewayToken.value.trim())
   uni.showToast({
     title: '网关令牌已保存',
+    icon: 'none'
+  })
+}
+
+function saveApiKey() {
+  writeStorage(STORAGE_KEYS.deepseekApiKey, apiKey.value.trim())
+  uni.showToast({
+    title: 'API Key 已保存',
     icon: 'none'
   })
 }
@@ -358,6 +386,29 @@ function goToPersona() {
 
 .setting-item:last-child {
   border-bottom: none;
+}
+
+.setting-item.column {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12rpx;
+}
+
+.setting-hint {
+  display: block;
+  font-size: 24rpx;
+  color: var(--dopamine-text-sub);
+  line-height: 1.5;
+  padding: 8rpx 0 16rpx;
+}
+
+.setting-input {
+  width: 100%;
+  height: 72rpx;
+  background: var(--dopamine-bg);
+  border-radius: 16rpx;
+  padding: 0 24rpx;
+  font-size: 28rpx;
 }
 
 .setting-label {

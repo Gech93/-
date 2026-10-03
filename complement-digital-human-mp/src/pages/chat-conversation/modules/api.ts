@@ -36,6 +36,12 @@ export interface CallDeepSeekParams {
   deps?: ApiDeps
 }
 
+// ===== 开发者内置网关配置（开箱即用）=====
+// 部署 chat-gateway 云函数后，将地址与令牌填入此处，用户无需任何配置即可使用 AI
+// 留空则回退到用户自行配置的 API Key 模式
+const BUILTIN_GATEWAY_URL = '' // 例: 'https://xxx.next.bspapp.com/chat-gateway'
+const BUILTIN_GATEWAY_TOKEN = '' // 与云函数环境变量 CHAT_GATEWAY_TOKEN 保持一致
+
 const defaultDeps: ApiDeps = {
   request: (options) =>
     uni.request({
@@ -62,10 +68,12 @@ export async function callDeepSeekAPI(params: CallDeepSeekParams): Promise<ChatR
   ]
 
   // 优先走云端网关（密钥留在服务端，客户端不暴露；携带访问令牌鉴权）
-  const gatewayUrl = deps.getStorage('cloud_gateway_url') as string
-  const useProxy = deps.getStorage('use_cloud_proxy') === true
+  // 默认启用内置网关（开箱即用），用户未显式关闭时自动走网关
+  const useProxy = deps.getStorage('use_cloud_proxy') !== false
+  const customGatewayUrl = (deps.getStorage('cloud_gateway_url') as string) || ''
+  const gatewayUrl = customGatewayUrl || BUILTIN_GATEWAY_URL
   if (useProxy && gatewayUrl) {
-    const gatewayToken = (deps.getStorage('cloud_gateway_token') as string) || ''
+    const gatewayToken = (deps.getStorage('cloud_gateway_token') as string) || BUILTIN_GATEWAY_TOKEN
     try {
       const proxyRes = await deps.request({
         url: gatewayUrl,
