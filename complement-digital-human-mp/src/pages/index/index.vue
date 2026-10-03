@@ -757,7 +757,7 @@ function handleStart() {
 }
 
 .mirror-3 .mirror-frame {
-  background: linear-gradient(150deg, #ede4ff 0%, #c4b5fd 55%, #a78bfa 100%);
+  background: linear-gradient(150deg, #a7f3d0 0%, #34d399 55%, #059669 100%);
   animation-delay: 0.6s;
 }
 
@@ -794,7 +794,7 @@ function handleStart() {
 }
 
 .mirror-3 .mirror-glass {
-  background: linear-gradient(170deg, #f1ecff 0%, #e4dbff 60%, #cfc2ff 100%);
+  background: linear-gradient(170deg, #ecfdf5 0%, #d1fae5 60%, #a7f3d0 100%);
 }
 
 .mirror-base {
@@ -893,7 +893,7 @@ function handleStart() {
 }
 
 .mirror-3 .rm-mochi {
-  background: linear-gradient(160deg, #f7f4ff 0%, #e4dbff 55%, #c4b5fd 100%);
+  background: linear-gradient(160deg, #f0fdfa 0%, #ccfbf1 55%, #99f6e4 100%);
 }
 
 /* 布丁反射：杯体 + 侧面轮廓 */
@@ -915,7 +915,7 @@ function handleStart() {
 }
 
 .mirror-3 .rm-pudding {
-  background: linear-gradient(160deg, #f7f4ff 0%, #e4dbff 55%, #cbbdfd 100%);
+  background: linear-gradient(160deg, #f0fdfa 0%, #ccfbf1 55%, #99f6e4 100%);
 }
 
 /* 水母反射：半透明伞盖（触手单独绘制） */
@@ -943,8 +943,8 @@ function handleStart() {
 }
 
 .mirror-3 .rm-jellyfish {
-  background: linear-gradient(170deg, rgba(247, 244, 255, 0.8) 0%,
-      rgba(196, 181, 253, 0.82) 55%, rgba(167, 139, 250, 0.88) 100%);
+  background: linear-gradient(170deg, rgba(240, 253, 250, 0.8) 0%,
+      rgba(153, 246, 228, 0.82) 55%, rgba(45, 212, 191, 0.88) 100%);
 }
 
 /* 反射：团子奶油顶 */
@@ -956,17 +956,41 @@ function handleStart() {
   width: 62rpx;
   height: 36rpx;
   z-index: 2;
-  border-radius: 50% 50% 44% 44% / 62% 62% 38% 38%;
+  border-radius: 50% 50% 46% 46% / 60% 60% 40% 40%;
   background: linear-gradient(180deg, #d6c9ff 0%, #8b5cf6 100%);
   box-shadow: inset 0 -5rpx 8rpx rgba(255, 255, 255, 0.25);
 }
 
-.mirror-2 .reflection-cream {
+.reflection-cream::before,
+.reflection-cream::after {
+  content: '';
+  position: absolute;
+  top: -12rpx;
+  width: 30rpx;
+  height: 30rpx;
+  border-radius: 50% 50% 46% 46% / 60% 60% 40% 40%;
+  background: linear-gradient(180deg, #d6c9ff 0%, #8b5cf6 100%);
+  box-shadow: inset 0 3rpx 6rpx rgba(255, 255, 255, 0.3);
+}
+
+.reflection-cream::before {
+  left: 1rpx;
+}
+
+.reflection-cream::after {
+  right: 1rpx;
+}
+
+.mirror-2 .reflection-cream,
+.mirror-2 .reflection-cream::before,
+.mirror-2 .reflection-cream::after {
   background: linear-gradient(180deg, #ff9dc4 0%, #f55c92 100%);
 }
 
-.mirror-3 .reflection-cream {
-  background: linear-gradient(180deg, #e4dbff 0%, #a78bfa 100%);
+.mirror-3 .reflection-cream,
+.mirror-3 .reflection-cream::before,
+.mirror-3 .reflection-cream::after {
+  background: linear-gradient(180deg, #99f6e4 0%, #14b8a6 100%);
 }
 
 /* 反射：布丁焦糖层 + 樱桃 */
@@ -1036,7 +1060,7 @@ function handleStart() {
 }
 
 .mirror-3 .reflection-tentacle {
-  background: linear-gradient(180deg, rgba(167, 139, 250, 0.5), rgba(139, 92, 246, 0.75));
+  background: linear-gradient(180deg, rgba(94, 234, 212, 0.5), rgba(20, 184, 166, 0.75));
 }
 
 .reflection-tentacle::after {
@@ -1053,6 +1077,10 @@ function handleStart() {
 
 .mirror-2 .reflection-tentacle::after {
   background: rgba(245, 92, 146, 0.78);
+}
+
+.mirror-3 .reflection-tentacle::after {
+  background: rgba(20, 184, 166, 0.78);
 }
 
 .rt-1 {
@@ -1145,6 +1173,15 @@ function handleStart() {
   border-top: none;
   border-radius: 0 0 20rpx 20rpx;
   transform: translateX(-50%);
+}
+
+.mirror-1 .reflection-mouth {
+  width: 18rpx;
+  height: 3rpx;
+  bottom: 27%;
+  border: none;
+  background: var(--dopamine-text);
+  border-radius: 0;
 }
 
 .mirror-2 .reflection-mouth {
