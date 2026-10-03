@@ -192,7 +192,7 @@ const MASCOT_NAMES: Record<string, string> = {
   jellyfish: '小水母',
 }
 
-const mascot = ref('mochi')
+const mascot = ref('pudding')
 
 const mascotLabel = computed(() => MASCOT_NAMES[mascot.value] || MASCOT_NAMES.mochi)
 
