@@ -40,7 +40,24 @@
           <span>{{ personaMbti }}</span>
         </div>
         <div class="message-content">
-          <p class="message-text">{{ msg.content }}</p>
+          <p class="message-text" v-if="msg.structured">{{ msg.structured.perspective }}</p>
+          <p class="message-text" v-else>{{ msg.content }}</p>
+          <div
+            v-if="msg.structured && msg.structured.suggestions && msg.structured.suggestions.length"
+            class="suggestion-block"
+          >
+            <p class="suggestion-title">接下来可以这样做</p>
+            <ol class="suggestion-list">
+              <li v-for="(s, i) in msg.structured.suggestions" :key="i" class="suggestion-item">{{ s }}</li>
+            </ol>
+          </div>
+          <p v-if="msg.structured && msg.structured.followUpQuestion" class="follow-up-question">
+            {{ msg.structured.followUpQuestion }}
+          </p>
+          <div v-if="msg.structured" class="feedback-row">
+            <button class="feedback-btn" @click="sendFeedback(msg, true)">👍 有用</button>
+            <button class="feedback-btn" @click="sendFeedback(msg, false)">🤔 没感觉</button>
+          </div>
           <span class="message-time">{{ formatTime(msg.timestamp) }}</span>
         </div>
       </div>
@@ -67,6 +84,8 @@
         />
         <span class="slider-value">{{ complementLevel }}%</span>
       </div>
+      <p class="guide-hint" v-if="remainDays > 0">本周已调整，{{ remainDays }} 天后可再调</p>
+      <p class="guide-hint" v-else>互补度每周可调整一次，调整后影响 AI 的互补视角</p>
 
       <div class="input-row">
         <input
@@ -126,14 +145,32 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePersonaStore } from '../stores/persona'
+import { buildSystemPrompt, buildStructuredInstruction } from '../services/deepseek'
+
+interface StructuredReply {
+  perspective: string
+  suggestions: string[]
+  followUpQuestion: string
+  memoryUpdates?: {
+    facts?: Array<{ content: string; category?: string }>
+    summary?: string
+    behavior?: {
+      emotionTendency?: string
+      decisionStyle?: string
+      expressionStyle?: string
+      deepNeed?: string
+    }
+  }
+}
 
 interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
+  structured?: StructuredReply | null
   timestamp: Date
 }
 
@@ -151,6 +188,7 @@ const personaMbti = ref('AI')
 const showApiKeyModal = ref(false)
 const apiKey = ref('')
 const useDeepSeek = ref(false)
+const remainDays = ref(0)
 
 // 获取存储键
 const getStorageKey = () => {
@@ -164,6 +202,7 @@ onMounted(() => {
     personaName.value = activePersona.name
     personaMbti.value = activePersona.complementMbti
     complementLevel.value = activePersona.complementLevel
+    remainDays.value = personaStore.getRemainDays(activePersona)
   }
   
   loadApiSettings()
@@ -260,22 +299,39 @@ async function handleSend() {
   scrollToBottom()
 
   try {
-    let response: string
+    let rawReply: string
     
     if (useDeepSeek.value && apiKey.value) {
-      response = await callDeepSeekAPI(text)
+      rawReply = await callDeepSeekAPI(text)
     } else {
-      response = generateMockResponse(text)
+      rawReply = generateMockResponse(text)
     }
     
+    const parsed = parseStructuredReply(rawReply)
     const aiMsg: Message = {
       id: (Date.now() + 1).toString(),
       role: 'assistant',
-      content: response,
+      content: parsed ? (parsed.perspective || rawReply) : rawReply,
+      structured: parsed,
       timestamp: new Date(),
     }
     messages.value.push(aiMsg)
     saveMessages()
+
+    // 记忆层 + 成长体系
+    const persona = personaStore.activePersona
+    if (persona && parsed) {
+      if (parsed.memoryUpdates) {
+        personaStore.applyMemoryUpdates(parsed.memoryUpdates)
+      } else {
+        personaStore.applyMemoryUpdates({
+          summary: text.length > 40 ? text.slice(0, 40) + '…' : text,
+        })
+      }
+      personaStore.recordConversation()
+    } else if (persona) {
+      personaStore.recordConversation()
+    }
   } catch (error) {
     console.error('AI 回复失败:', error)
     const errorMsg: Message = {
@@ -303,16 +359,29 @@ async function callDeepSeekAPI(userMessage: string): Promise<string> {
   const userMbti = personaStore.userMbti || '未知'
   const complementMbti = persona?.complementMbti || '未知'
   const complementLevelValue = complementLevel.value
+  const isDecisionMode = checkDecisionRequest(userMessage)
 
-  const systemPrompt = `你是用户的互补AI伙伴。用户的人格类型是 ${userMbti}，你的互补人格类型是 ${complementMbti}，互补度为 ${complementLevelValue}%。
+  const memoryInjection = persona
+    ? {
+        memory: persona.memory,
+        feedback: persona.feedback,
+        behaviorProfile: persona.behaviorProfile,
+      }
+    : undefined
 
-你的角色是提供与用户互补的视角和思考方式，帮助用户从不同角度看待问题。
-- 如果用户表现出内向(I)，你应该表现得外向(E)，更主动地分享想法
-- 如果用户偏重感觉(S)，你可以提供直觉(N)的观点，关注可能性和未来
-- 如果用户偏重思考(T)，你可以提供情感(F)的视角，关注人际关系和价值观
-- 如果用户偏重判断(J)，你可以表现得更随性(P)，提供灵活的方案
+  const systemPrompt = buildSystemPrompt(
+    userMbti,
+    complementMbti,
+    complementLevelValue,
+    isDecisionMode,
+    persona?.name || '互补伙伴',
+    memoryInjection
+  ) + '\n\n' + buildStructuredInstruction()
 
-保持友好、专业的语气，但始终保持你的互补特质。`
+  const history = messages.value.slice(-6).map(m => ({
+    role: m.role,
+    content: m.content,
+  }))
 
   const response = await fetch('https://api.deepseek.com/chat/completions', {
     method: 'POST',
@@ -324,9 +393,11 @@ async function callDeepSeekAPI(userMessage: string): Promise<string> {
       model: 'deepseek-chat',
       messages: [
         { role: 'system', content: systemPrompt },
+        ...history,
         { role: 'user', content: userMessage }
       ],
-      stream: false
+      stream: false,
+      response_format: { type: 'json_object' }
     })
   })
 
@@ -337,6 +408,31 @@ async function callDeepSeekAPI(userMessage: string): Promise<string> {
 
   const data = await response.json()
   return data.choices[0].message.content
+}
+
+function parseStructuredReply(raw: string): StructuredReply | null {
+  try {
+    const trimmed = raw.trim()
+    const jsonText = trimmed.startsWith('{') ? trimmed : trimmed.slice(trimmed.indexOf('{'))
+    const obj = JSON.parse(jsonText)
+    if (!obj || typeof obj !== 'object' || !obj.perspective) return null
+    return {
+      perspective: String(obj.perspective),
+      suggestions: Array.isArray(obj.suggestions) ? obj.suggestions.filter((s: unknown) => typeof s === 'string').map(String).slice(0, 4) : [],
+      followUpQuestion: typeof obj.followUpQuestion === 'string' ? obj.followUpQuestion : '',
+      memoryUpdates: obj.memoryUpdates || undefined,
+    }
+  } catch (error) {
+    return null
+  }
+}
+
+function sendFeedback(msg: Message, useful: boolean) {
+  const persona = personaStore.activePersona
+  if (!persona) return
+  const sampleText = msg.structured?.suggestions?.join('；') || msg.content
+  personaStore.recordFeedback(useful, sampleText)
+  alert(useful ? '已记录，这类视角会继续保持' : '已记录，之后会避免这类表述')
 }
 
 function generateMockResponse(text: string): string {
@@ -383,8 +479,38 @@ function scrollToBottom() {
 }
 
 function updateComplementLevel() {
-  if (personaStore.activePersona) {
-    personaStore.updateComplementLevel(complementLevel.value)
+  const persona = personaStore.activePersona
+  if (!persona) {
+    complementLevel.value = 50
+    return
+  }
+  const target = complementLevel.value
+  const remain = personaStore.getRemainDays(persona)
+  if (remain > 0) {
+    complementLevel.value = persona.complementLevel
+    remainDays.value = remain
+    alert(`本周仅可调整一次，剩 ${remain} 天`)
+    return
+  }
+  if (target === persona.complementLevel) {
+    complementLevel.value = target
+    return
+  }
+  const ok = window.confirm(
+    `确认将互补度从 ${persona.complementLevel}% 调整为 ${target}%？互补度每周仅可调整一次，调整后会影响 AI 的互补视角。`
+  )
+  if (!ok) {
+    complementLevel.value = persona.complementLevel
+    return
+  }
+  const success = personaStore.updateComplementLevel(target)
+  if (success) {
+    const updated = personaStore.activePersona
+    remainDays.value = updated ? personaStore.getRemainDays(updated) : 0
+    alert('互补度已更新')
+  } else {
+    complementLevel.value = persona.complementLevel
+    alert('更新失败，请稍后重试')
   }
 }
 
@@ -564,6 +690,66 @@ function goBack() {
   display: block;
 }
 
+.suggestion-block {
+  margin-top: 12px;
+  background: rgba(102, 126, 234, 0.06);
+  border-left: 3px solid #667eea;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.suggestion-title {
+  font-size: 13px;
+  font-weight: bold;
+  color: #667eea;
+  margin: 0 0 6px 0;
+}
+
+.suggestion-list {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.suggestion-item {
+  font-size: 14px;
+  color: #333333;
+  line-height: 1.6;
+  margin-bottom: 4px;
+}
+
+.follow-up-question {
+  margin-top: 12px;
+  font-size: 14px;
+  color: #764ba2;
+  background: rgba(118, 75, 162, 0.06);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.feedback-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.feedback-btn {
+  flex: 1;
+  padding: 6px 0;
+  font-size: 13px;
+  color: #666666;
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.feedback-btn:hover {
+  background: rgba(102, 126, 234, 0.1);
+  border-color: #667eea;
+  color: #667eea;
+}
+
 .typing-indicator {
   display: flex;
   align-items: center;
@@ -632,6 +818,13 @@ function goBack() {
   color: #667eea;
   font-weight: bold;
   min-width: 50px;
+}
+
+.guide-hint {
+  font-size: 12px;
+  color: #999999;
+  margin: -6px 0 12px 0;
+  text-align: center;
 }
 
 .input-row {

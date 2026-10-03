@@ -37,6 +37,29 @@ export const suggestedTypes = [
   { name: '探险家', tags: ['探险型'], description: '鼓励冒险和突破舒适区' },
 ]
 
+interface MemoryFact {
+  content: string
+  category: string
+  importance: number
+  createdAt: string
+  lastAt: string
+}
+
+interface FeedbackSample {
+  text: string
+  count: number
+  lastAt: string
+}
+
+interface BehaviorProfile {
+  emotionTendency: string
+  decisionStyle: string
+  expressionStyle: string
+  deepNeed: string
+  updateCount: number
+  lastUpdatedAt: string
+}
+
 interface Persona {
   id: string
   name: string
@@ -49,6 +72,42 @@ interface Persona {
   growthLevel: number
   isActive: boolean
   tags: string[]
+  memory: {
+    facts: MemoryFact[]
+    summary: string
+    userFacts: string[]
+  }
+  feedback: {
+    useful: number
+    miss: number
+    usefulSamples: FeedbackSample[]
+    missSamples: FeedbackSample[]
+  }
+  behaviorProfile: BehaviorProfile
+}
+
+const MAX_GROWTH_LEVEL = 10
+const CONVERSATIONS_PER_LEVEL = 10
+const MAX_MEMORY_FACTS = 20
+const MAX_USER_FACTS = 20
+
+function defaultMemory() {
+  return { facts: [], summary: '', userFacts: [] }
+}
+
+function defaultFeedback() {
+  return { useful: 0, miss: 0, usefulSamples: [], missSamples: [] }
+}
+
+function defaultBehaviorProfile(): BehaviorProfile {
+  return {
+    emotionTendency: '平稳理性',
+    decisionStyle: '综合型，需要结构化帮助',
+    expressionStyle: '陈述型，需要被理解',
+    deepNeed: '被理解与获得方向感',
+    updateCount: 0,
+    lastUpdatedAt: new Date().toISOString(),
+  }
 }
 
 export const usePersonaStore = defineStore('persona', () => {
@@ -148,6 +207,9 @@ export const usePersonaStore = defineStore('persona', () => {
       growthLevel: 1,
       isActive: personas.value.length === 0,
       tags: suggested?.tags || [],
+      memory: defaultMemory(),
+      feedback: defaultFeedback(),
+      behaviorProfile: defaultBehaviorProfile(),
     }
 
     personas.value.push(newPersona)
@@ -182,9 +244,9 @@ export const usePersonaStore = defineStore('persona', () => {
       return false
     }
 
-    const nextMonth = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+    const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
     persona.complementLevel = level
-    persona.nextModifyTime = nextMonth.toISOString()
+    persona.nextModifyTime = nextWeek.toISOString()
     saveToStorage()
 
     return true
@@ -239,7 +301,12 @@ export const usePersonaStore = defineStore('persona', () => {
       if (dataStr) {
         const data = JSON.parse(dataStr)
         userMbti.value = data.userMbti || null
-        personas.value = data.personas || []
+        personas.value = (data.personas || []).map((p: any) => ({
+          ...p,
+          memory: p.memory || defaultMemory(),
+          feedback: p.feedback || defaultFeedback(),
+          behaviorProfile: p.behaviorProfile || defaultBehaviorProfile(),
+        }))
         activePersonaId.value = data.activePersonaId || null
         isTestCompleted.value = data.isTestCompleted || false
         answers.value = data.answers || {}
@@ -252,6 +319,95 @@ export const usePersonaStore = defineStore('persona', () => {
       isTestCompleted.value = false
       answers.value = {}
     }
+  }
+
+  // 记录一次对话（成长体系：每 10 次升 1 级）
+  function recordConversation() {
+    const persona = activePersona.value
+    if (!persona) return
+    persona.totalConversations += 1
+    persona.growthLevel = Math.min(MAX_GROWTH_LEVEL, 1 + Math.floor(persona.totalConversations / CONVERSATIONS_PER_LEVEL))
+    saveToStorage()
+  }
+
+  // 记录反馈（👍 有用 / 🤔 没感觉）
+  function recordFeedback(useful: boolean, sampleText = '') {
+    const persona = activePersona.value
+    if (!persona) return
+    if (useful) {
+      persona.feedback.useful += 1
+      if (sampleText) {
+        const trimmed = sampleText.length > 60 ? sampleText.slice(0, 60) + '…' : sampleText
+        const existing = persona.feedback.usefulSamples.find(s => s.text === trimmed)
+        if (existing) {
+          existing.count += 1
+          existing.lastAt = new Date().toISOString()
+        } else {
+          persona.feedback.usefulSamples.push({ text: trimmed, count: 1, lastAt: new Date().toISOString() })
+        }
+      }
+    } else {
+      persona.feedback.miss += 1
+      if (sampleText) {
+        const trimmed = sampleText.length > 60 ? sampleText.slice(0, 60) + '…' : sampleText
+        const existing = persona.feedback.missSamples.find(s => s.text === trimmed)
+        if (existing) {
+          existing.count += 1
+          existing.lastAt = new Date().toISOString()
+        } else {
+          persona.feedback.missSamples.push({ text: trimmed, count: 1, lastAt: new Date().toISOString() })
+        }
+      }
+    }
+    saveToStorage()
+  }
+
+  // 应用 AI 抽取的记忆更新（事实/滚动摘要/行为画像）
+  function applyMemoryUpdates(updates: {
+    facts?: Array<{ content: string; category?: string }>
+    summary?: string
+    behavior?: Partial<BehaviorProfile>
+  }) {
+    const persona = activePersona.value
+    if (!persona) return
+    if (updates.facts?.length) {
+      const now = new Date().toISOString()
+      updates.facts.forEach(f => {
+        if (!f.content) return
+        const trimmed = f.content.trim()
+        if (!trimmed) return
+        const existing = persona.memory.facts.find(mf => mf.content === trimmed)
+        if (existing) {
+          existing.importance = Math.min(5, existing.importance + 1)
+          existing.lastAt = now
+        } else {
+          persona.memory.facts.push({
+            content: trimmed,
+            category: f.category || 'other',
+            importance: 3,
+            createdAt: now,
+            lastAt: now,
+          })
+        }
+        if (!persona.memory.userFacts.includes(trimmed)) {
+          persona.memory.userFacts.push(trimmed)
+        }
+      })
+      if (persona.memory.facts.length > MAX_MEMORY_FACTS) persona.memory.facts = persona.memory.facts.slice(-MAX_MEMORY_FACTS)
+      if (persona.memory.userFacts.length > MAX_USER_FACTS) persona.memory.userFacts = persona.memory.userFacts.slice(-MAX_USER_FACTS)
+    }
+    if (updates.summary) {
+      persona.memory.summary = updates.summary.slice(0, 120)
+    }
+    if (updates.behavior) {
+      persona.behaviorProfile = {
+        ...persona.behaviorProfile,
+        ...updates.behavior,
+        updateCount: persona.behaviorProfile.updateCount + 1,
+        lastUpdatedAt: new Date().toISOString(),
+      }
+    }
+    saveToStorage()
   }
 
   // 重置测试
@@ -286,6 +442,9 @@ export const usePersonaStore = defineStore('persona', () => {
     deletePersona,
     canModifyComplement,
     getRemainDays,
+    recordConversation,
+    recordFeedback,
+    applyMemoryUpdates,
     loadFromStorage,
     resetTest,
   }

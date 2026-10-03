@@ -12,6 +12,14 @@
       <view class="hero-meta">
         <text class="hero-meta-item">成长 Lv.{{ persona.growthLevel }}</text>
         <text class="hero-meta-item">对话 {{ persona.totalConversations }} 次</text>
+        <text class="hero-meta-item">陪伴 {{ companionDays }} 天</text>
+      </view>
+      <view class="growth-block">
+        <view class="growth-track">
+          <view class="growth-fill" :style="{ width: growthProgress + '%' }"></view>
+        </view>
+        <text class="growth-text" v-if="persona.growthLevel < 10">距 Lv.{{ persona.growthLevel + 1 }} 还差 {{ nextLevelGap }} 次对话</text>
+        <text class="growth-text" v-else>已达最高等级 Lv.10，感谢长久陪伴</text>
       </view>
     </view>
 
@@ -71,7 +79,7 @@
           <text class="guide-desc">{{ g.description }}</text>
         </view>
       </view>
-      <text class="guide-tip">当前互补度 {{ persona.complementLevel }}%，可在对话中调整（每月限 1 次）。</text>
+      <text class="guide-tip">当前互补度 {{ persona.complementLevel }}%，可在对话中调整（每周限 1 次）。</text>
     </view>
 
     <view class="section-card">
@@ -176,6 +184,23 @@ const mbtiDims = computed(() => {
 const formalityText = computed(() => {
   const map: Record<string, string> = { casual: '随和', neutral: '中性', formal: '正式' }
   return map[persona.value?.communicationStyle?.formality || 'neutral'] || '中性'
+})
+
+const companionDays = computed(() => {
+  if (!persona.value?.createdAt) return 0
+  const created = new Date(persona.value.createdAt)
+  const now = new Date()
+  return Math.max(1, Math.ceil((now.getTime() - created.getTime()) / (24 * 60 * 60 * 1000)))
+})
+
+const growthProgress = computed(() => {
+  const total = persona.value?.totalConversations ?? 0
+  return Math.min(100, Math.round(((total % 10) / 10) * 100))
+})
+
+const nextLevelGap = computed(() => {
+  const total = persona.value?.totalConversations ?? 0
+  return 10 - (total % 10)
 })
 
 const usefulMemories = computed(() =>
@@ -303,6 +328,32 @@ function goBack() {
 .hero-meta-item {
   font-size: 26rpx;
   color: rgba(255, 255, 255, 0.8);
+}
+
+.growth-block {
+  margin-top: 32rpx;
+}
+
+.growth-track {
+  width: 100%;
+  height: 16rpx;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 8rpx;
+  overflow: hidden;
+}
+
+.growth-fill {
+  height: 100%;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 8rpx;
+  transition: width 0.3s;
+}
+
+.growth-text {
+  display: block;
+  margin-top: 16rpx;
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .section-card {

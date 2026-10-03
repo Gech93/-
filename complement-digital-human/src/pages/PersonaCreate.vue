@@ -102,7 +102,7 @@
       </div>
 
       <div class="complement-slider">
-        <span class="slider-label">调节互补度（每月限修改1次）</span>
+        <span class="slider-label">调节互补度（每周限修改1次）</span>
         <input
           type="range"
           :value="selectedComplementLevel"

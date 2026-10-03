@@ -93,7 +93,8 @@
         <text class="guide-item" :class="{ active: complementLevel > 40 && complementLevel < 80 }">平衡</text>
         <text class="guide-arrow">·</text>
         <text class="guide-item" :class="{ active: complementLevel >= 80 }">强互补</text>
-        <text class="guide-hint" v-if="remainDays > 0">本月已调整，{{ remainDays }} 天后可再调</text>
+        <text class="guide-hint" v-if="remainDays > 0">本周已调整，{{ remainDays }} 天后可再调</text>
+        <text class="guide-hint" v-else>互补度每周可调整一次，调整后影响 AI 的互补视角</text>
       </view>
 
       <view class="input-row">
@@ -444,22 +445,47 @@ function scrollToBottom() {
 function updateComplementLevel(e: { detail: { value: number } }) {
   const target = e.detail.value
   const persona = personaStore.activePersona
-  if (persona) {
-    const ok = personaStore.updateComplementLevel(target)
-    if (ok) {
-      complementLevel.value = target
-      remainDays.value = personaStore.getRemainDays(persona)
-    } else {
-      complementLevel.value = persona.complementLevel
-      remainDays.value = personaStore.getRemainDays(persona)
-      uni.showToast({
-        title: remainDays.value > 0 ? `本月仅可调整一次，剩 ${remainDays.value} 天` : '互补度每月仅可调整一次',
-        icon: 'none'
-      })
-    }
-  } else {
+  if (!persona) {
     complementLevel.value = target
+    return
   }
+  const remain = personaStore.getRemainDays(persona)
+  if (remain > 0) {
+    complementLevel.value = persona.complementLevel
+    remainDays.value = remain
+    uni.showToast({
+      title: `本周仅可调整一次，剩 ${remain} 天`,
+      icon: 'none'
+    })
+    return
+  }
+  if (target === persona.complementLevel) {
+    complementLevel.value = target
+    return
+  }
+  uni.showModal({
+    title: '调整互补度',
+    content: `确认将互补度从 ${persona.complementLevel}% 调整为 ${target}%？互补度每周仅可调整一次，调整后会影响 AI 的互补视角。`,
+    confirmText: '确认调整',
+    cancelText: '取消',
+    success: (res) => {
+      if (!res.confirm) {
+        complementLevel.value = persona.complementLevel
+        remainDays.value = personaStore.getRemainDays(persona)
+        return
+      }
+      const ok = personaStore.updateComplementLevel(target)
+      if (ok) {
+        complementLevel.value = target
+        remainDays.value = personaStore.getRemainDays(persona)
+        uni.showToast({ title: '互补度已更新', icon: 'none' })
+      } else {
+        complementLevel.value = persona.complementLevel
+        remainDays.value = personaStore.getRemainDays(persona)
+        uni.showToast({ title: '本周仅可调整一次', icon: 'none' })
+      }
+    }
+  })
 }
 
 function handleFeedback(useful: boolean, msg?: Message) {

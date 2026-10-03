@@ -120,7 +120,7 @@
       </view>
 
       <view class="complement-slider">
-        <text class="slider-label">调节互补度（每月限修改1次）</text>
+        <text class="slider-label">调节互补度（每周限修改1次）</text>
         <slider
           :value="selectedComplementLevel"
           min="0"
