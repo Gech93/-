@@ -23,7 +23,7 @@
           <text class="persona-type">互补类型：{{ persona?.complementMbti || '' }}</text>
           <text class="persona-level">互补度 {{ persona?.complementLevel || 0 }}%</text>
           <text class="persona-bigfive" v-if="persona?.complementBigFive">
-            大五互补：O{{ persona.complementBigFive.O }} C{{ persona.complementBigFive.C }} E{{ persona.complementBigFive.E }} A{{ persona.complementBigFive.A }} N{{ persona.complementBigFive.N }}
+            互补画像：O{{ persona.complementBigFive.O }} C{{ persona.complementBigFive.C }} E{{ persona.complementBigFive.E }} A{{ persona.complementBigFive.A }} N{{ persona.complementBigFive.N }}
           </text>
         </view>
         <view class="persona-check" v-if="persona?.isActive">✓</view>

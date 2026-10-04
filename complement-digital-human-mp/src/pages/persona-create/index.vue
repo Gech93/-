@@ -76,7 +76,7 @@
         <text class="preview-name">{{ personaName }}</text>
         <text class="preview-mbti">互补类型：{{ complementMbti }}（互补度 {{ selectedComplementLevel }}%）</text>
         <view class="preview-bigfive" v-if="complementBigFive">
-          <text class="preview-bigfive-title">大五互补人格</text>
+          <text class="preview-bigfive-title">互补人格画像</text>
           <view class="preview-bigfive-dims">
             <text v-for="d in bigFiveDimList" :key="d" class="preview-bigfive-dim">
               {{ bigFiveMeta[d].label }} {{ complementBigFive[d] }}
@@ -114,7 +114,7 @@
           <text class="info-value dims-value">{{ complementDimText }}</text>
         </view>
         <view class="info-row" v-if="complementBigFive">
-          <text class="info-label">大五互补</text>
+          <text class="info-label">互补画像</text>
           <text class="info-value dims-value">{{ bigFiveDimText }}</text>
         </view>
       </view>

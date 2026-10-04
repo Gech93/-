@@ -121,7 +121,7 @@ export function buildSystemPrompt(ctx: PromptContext): string {
   if (bigFiveProfile) {
     parts.push(`用户大五人格（已结合对话行为动态修正）：${describeBigFiveProfile({ scores: adjustedBigFive })}`)
     if (persona?.complementBigFive) {
-      parts.push(`你的大五互补人格：${bigFiveDims.map(d => `${bigFiveMeta[d].label} ${persona.complementBigFive[d]}`).join('，')}`)
+      parts.push(`你的互补人格画像（大五维度）：${bigFiveDims.map(d => `${bigFiveMeta[d].label} ${persona.complementBigFive[d]}`).join('，')}`)
     }
   }
   parts.push('')
@@ -130,7 +130,7 @@ export function buildSystemPrompt(ctx: PromptContext): string {
   const bfGuidance = buildBigFiveGuidance(adjustedBigFive, persona?.complementBigFive)
   if (bfGuidance) {
     parts.push('')
-    parts.push('【大五互补指引】')
+    parts.push('【互补人格指引】')
     parts.push(bfGuidance)
   }
 

@@ -57,7 +57,7 @@ describe('buildSystemPrompt', () => {
       bigFiveProfile: { scores: { O: 60, C: 50, E: 40, A: 50, N: 30 }, confidence: 70, descriptions: {} as never },
     })
     expect(prompt).toContain('用户大五人格')
-    expect(prompt).toContain('你的大五互补人格')
+    expect(prompt).toContain('你的互补人格画像（大五维度）')
   })
 
   it('无 persona 时使用默认身份回退', () => {

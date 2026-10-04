@@ -11,7 +11,6 @@
 
     <view class="question-card">
       <text class="question-icon">💡</text>
-      <text class="dimension-tag" v-if="isBigFiveMode">{{ currentQuestion.label }}</text>
       <text class="question-text">{{ currentQuestion.question }}</text>
     </view>
 
@@ -41,8 +40,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { usePersonaStore } from '../../stores/persona'
-import type { BigFiveScores } from '../../stores/persona'
+import { usePersonaStore, bigFiveMeta, bigFiveDims } from '../../stores/persona'
 
 const personaStore = usePersonaStore()
 
@@ -97,14 +95,7 @@ function describeMbtiProfile(): string {
 function describeBigFiveProfile(): string {
   const profile = personaStore.bigFiveProfile
   if (!profile || !profile.scores) return ''
-  const keyMap: { label: string; key: keyof BigFiveScores }[] = [
-    { label: '开放性', key: 'O' },
-    { label: '尽责性', key: 'C' },
-    { label: '外向性', key: 'E' },
-    { label: '宜人性', key: 'A' },
-    { label: '神经质', key: 'N' },
-  ]
-  return keyMap.map(d => `${d.label} ${profile.descriptions[d.key]}`).join('，')
+  return bigFiveDims.map(d => `${bigFiveMeta[d].label} ${profile.descriptions[d]}`).join('，')
 }
 
 function handleNext() {

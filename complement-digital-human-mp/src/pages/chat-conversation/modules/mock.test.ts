@@ -42,7 +42,7 @@ describe('detectScenario', () => {
 describe('generateMockResponse', () => {
   it('返回对应场景模板的结构化回复', () => {
     const res = generateMockResponse('我该不该换工作，好纠结')
-    expect(res.structured?.perspective).toBe(scenarioTemplates.decision.perspective)
+    expect(res.structured?.perspective).toContain(scenarioTemplates.decision.perspective)
     expect(res.structured?.suggestions).toEqual(scenarioTemplates.decision.suggestions)
     expect(res.structured?.followUpQuestion).toBe(scenarioTemplates.decision.followUp)
   })

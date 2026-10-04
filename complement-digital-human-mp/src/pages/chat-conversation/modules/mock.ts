@@ -53,13 +53,13 @@ export const scenarioTemplates: Record<string, ScenarioTemplate> = {
     followUp: '如果这个问题根本不是问题，那它可能是什么？',
   },
   default: {
-    perspective: '这是一个值得认真对待的话题。作为与你互补的视角，我建议我们一起把它拆开来看，找到你真正在意的东西。',
+    perspective: '我听到了你说的这件事。作为与你互补的视角，我想先和你一起把它拆开，找到你真正在意、也真正卡住你的地方。',
     suggestions: [
-      '试着把想法写下来，理清自己的真实诉求',
-      '找到这件事里你能控制的部分，先行动起来',
-      '保持开放心态，允许答案晚一点出现',
+      '把整件事的前因后果按时间顺序理一遍',
+      '找出这件事里最让你不舒服的那个点',
+      '列出你已经试过、但没奏效的做法',
     ],
-    followUp: '你希望从这次对话里带走什么？',
+    followUp: '这件事里，最让你放心不下的具体是哪一环？',
   },
 }
 
@@ -75,8 +75,10 @@ export function detectScenario(text: string): string {
 export function generateMockResponse(text: string): ChatResponse {
   const scenario = detectScenario(text)
   const template = scenarioTemplates[scenario]
+  const trimmed = text.trim()
+  const topic = trimmed.length > 20 ? trimmed.slice(0, 20) + '…' : trimmed
   const structured: StructuredReply = {
-    perspective: template.perspective,
+    perspective: topic ? `听你说到「${topic}」，${template.perspective}` : template.perspective,
     suggestions: [...template.suggestions],
     followUpQuestion: template.followUp,
   }

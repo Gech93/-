@@ -41,7 +41,7 @@
 
     <view class="section-card">
       <text class="section-title">人格画像</text>
-      <text class="section-desc">他是怎样看世界的：</text>
+      <text class="section-desc">这个数字人是怎样看世界的：</text>
       <view class="dim-list">
         <view class="dim-item" v-for="d in mbtiDims" :key="d.letter">
           <text class="dim-letter">{{ d.letter }}</text>
@@ -52,8 +52,8 @@
     </view>
 
     <view class="section-card" v-if="persona.complementBigFive">
-      <text class="section-title">大五互补画像</text>
-      <text class="section-desc">他在五个维度上的倾向（0=极低倾向，100=极高倾向）：</text>
+      <text class="section-title">互补人格画像</text>
+      <text class="section-desc">这个数字人在五个维度上的倾向（分数越高，越贴近右侧描述）：</text>
       <view class="bigfive-list">
         <view class="bigfive-item" v-for="d in bigFiveDimList" :key="d">
           <view class="bigfive-head">

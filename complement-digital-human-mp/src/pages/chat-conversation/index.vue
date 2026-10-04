@@ -19,15 +19,15 @@
             你好！我是{{ personaName }}，一个与你互补的AI伙伴。
           </text>
           <text class="welcome-subtitle">
-            今天想聊点什么？或者我可以帮你从不同角度思考问题。
+            想聊什么都可以，试着从一个具体场景说起，比如某件事、某次对话或一个正在纠结的选择。我先听听你的故事。
           </text>
           <view class="suggestion-chips">
-            <text class="suggestion-chip" @click="quickSend('我最近工作压力有点大，想聊聊')">工作压力</text>
-            <text class="suggestion-chip" @click="quickSend('我需要做一个重要决定')">重要决定</text>
-            <text class="suggestion-chip" @click="quickSend('分享一下今天的心情')">今天心情</text>
-            <text class="suggestion-chip" @click="quickSend('帮我从另一个角度思考问题')">换个角度</text>
-            <text class="suggestion-chip" @click="quickSend('我正在考虑职业转型，想听听你的看法')">职业转型</text>
-            <text class="suggestion-chip" @click="quickSend('我和朋友最近有点矛盾，不知道怎么处理')">关系冲突</text>
+            <text class="suggestion-chip" @click="quickSend('上周开会时我的方案被否掉了，我到现在还很憋屈，想聊聊这件事')">一件憋屈的事</text>
+            <text class="suggestion-chip" @click="quickSend('我最近在两个选择之间反复横跳，迟迟下不了决定，想让你帮我理一理')">一个纠结的选择</text>
+            <text class="suggestion-chip" @click="quickSend('今天在群里和同事因为一件事起了争执，我有点后悔当时的反应')">一次没发挥好的对话</text>
+            <text class="suggestion-chip" @click="quickSend('最近有个机会摆在我面前，但我担心风险，拿不准要不要接')">一个拿不准的机会</text>
+            <text class="suggestion-chip" @click="quickSend('最近状态不太好，具体也说不上来，想聊聊最近发生的事')">最近有点低落</text>
+            <text class="suggestion-chip" @click="quickSend('我和朋友最近因为一件小事闹了别扭，不知道该怎么缓和')">一段小别扭的关系</text>
           </view>
         </view>
       </view>
@@ -88,13 +88,13 @@
         <text class="slider-value">{{ complementLevel }}%</text>
       </view>
       <view class="slider-guide">
-        <text class="guide-item" :class="{ active: complementLevel <= 40 }">偏像你</text>
+        <text class="guide-item" :class="{ active: complementLevel <= 40 }">更像你</text>
         <text class="guide-arrow">·</text>
-        <text class="guide-item" :class="{ active: complementLevel > 40 && complementLevel < 80 }">平衡</text>
+        <text class="guide-item" :class="{ active: complementLevel > 40 && complementLevel < 80 }">互补适中</text>
         <text class="guide-arrow">·</text>
         <text class="guide-item" :class="{ active: complementLevel >= 80 }">强互补</text>
         <text class="guide-hint" v-if="remainDays > 0">本周已调整，{{ remainDays }} 天后可再调</text>
-        <text class="guide-hint" v-else>互补度每周可调整一次，调整后影响 AI 的互补视角</text>
+        <text class="guide-hint" v-else>互补度越高，AI 越常给出与你不同的观点和角度（每周可调 1 次）</text>
       </view>
 
       <view class="input-row">
