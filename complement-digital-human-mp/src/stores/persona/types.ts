@@ -63,25 +63,25 @@ export const bigFiveQuestions: BigFiveQuestion[] = [
   { id: 14, dimension: 'E', label: '外向性', reversed: true, question: '在大群人面前发言会让我很不自在。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 0.9 },
   { id: 15, dimension: 'E', label: '外向性', reversed: false, question: '聚会时，我常常是带动气氛的那个人。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 1.1 },
 
-  { id: 16, dimension: 'A', label: '宜人性', reversed: false, question: '我乐于助人，容易信任他人。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 0.9 },
-  { id: 17, dimension: 'A', label: '宜人性', reversed: true, question: '与人合作时，我倾向于坚持自己的看法。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'] },
-  { id: 18, dimension: 'A', label: '宜人性', reversed: false, question: '即使不认同对方，我也会先照顾对方的感受。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 1.1 },
-  { id: 19, dimension: 'A', label: '宜人性', reversed: true, question: '为了把事情做好，我可以接受比较强硬的竞争。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 0.9 },
-  { id: 20, dimension: 'A', label: '宜人性', reversed: false, question: '别人向我倾诉时，我通常能耐心听完。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 1.1 },
+  { id: 16, dimension: 'A', label: '合作倾向', reversed: false, question: '我乐于助人，容易信任他人。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 0.9 },
+  { id: 17, dimension: 'A', label: '合作倾向', reversed: true, question: '与人合作时，我倾向于坚持自己的看法。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'] },
+  { id: 18, dimension: 'A', label: '合作倾向', reversed: false, question: '即使不认同对方，我也会先照顾对方的感受。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 1.1 },
+  { id: 19, dimension: 'A', label: '合作倾向', reversed: true, question: '为了把事情做好，我可以接受比较强硬的竞争。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 0.9 },
+  { id: 20, dimension: 'A', label: '合作倾向', reversed: false, question: '别人向我倾诉时，我通常能耐心听完。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 1.1 },
 
-  { id: 21, dimension: 'N', label: '神经质', reversed: false, question: '我容易感到紧张或焦虑。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 0.9 },
-  { id: 22, dimension: 'N', label: '神经质', reversed: true, question: '面对压力时，我通常能保持平静。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'] },
-  { id: 23, dimension: 'N', label: '神经质', reversed: false, question: '一点小麻烦就能让我的情绪波动好一阵。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 1.1 },
-  { id: 24, dimension: 'N', label: '神经质', reversed: true, question: '我很少因为心事而失眠。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 0.9 },
-  { id: 25, dimension: 'N', label: '神经质', reversed: false, question: '我常担心未来可能发生的坏事。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 1.1 },
+  { id: 21, dimension: 'N', label: '情绪稳定性', reversed: false, question: '我容易感到紧张或焦虑。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 0.9 },
+  { id: 22, dimension: 'N', label: '情绪稳定性', reversed: true, question: '面对压力时，我通常能保持平静。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'] },
+  { id: 23, dimension: 'N', label: '情绪稳定性', reversed: false, question: '一点小麻烦就能让我的情绪波动好一阵。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 1.1 },
+  { id: 24, dimension: 'N', label: '情绪稳定性', reversed: true, question: '我很少因为心事而失眠。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 0.9 },
+  { id: 25, dimension: 'N', label: '情绪稳定性', reversed: false, question: '我常担心未来可能发生的坏事。', options: ['非常不同意', '比较不同意', '一般', '比较同意', '非常同意'], weight: 1.1 },
 ]
 
 export const bigFiveMeta: Record<keyof BigFiveScores, { label: string; low: string; high: string }> = {
   O: { label: '开放性', low: '务实传统', high: '开放创新' },
   C: { label: '尽责性', low: '灵活随性', high: '严谨自律' },
   E: { label: '外向性', low: '内敛沉静', high: '外向活跃' },
-  A: { label: '宜人性', low: '直接坚定', high: '温和合作' },
-  N: { label: '神经质', low: '情绪稳定', high: '敏感细腻' },
+  A: { label: '合作倾向', low: '直接坚定', high: '温和合作' },
+  N: { label: '情绪稳定性', low: '平稳从容', high: '细腻敏感' },
 }
 
 export const bigFiveDims = ['O', 'C', 'E', 'A', 'N'] as (keyof BigFiveScores)[]

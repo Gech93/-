@@ -31,11 +31,7 @@
     </view>
 
     <view class="bottom-actions">
-      <button
-        class="next-btn"
-        :disabled="currentAnswer == null"
-        @click="handleNext"
-      >
+      <button class="next-btn" @click="handleNext">
         {{ isLastQuestion ? '完成测试' : '下一题' }}
       </button>
     </view>
@@ -133,9 +129,7 @@ function handleNext() {
               url: '/pages/persona-create/index'
             })
           } else {
-            uni.navigateTo({
-              url: '/pages/persona-list/index'
-            })
+            uni.navigateBack()
           }
         }
       })
@@ -152,9 +146,7 @@ function handleNext() {
               url: '/pages/mbti-test/index?mode=bigfive'
             })
           } else {
-            uni.navigateTo({
-              url: '/pages/persona-list/index'
-            })
+            uni.navigateBack()
           }
         }
       })
