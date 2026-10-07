@@ -31,7 +31,7 @@
 
     <view class="bottom-actions">
       <button class="next-btn" @click="handleNext">
-        {{ isLastQuestion ? '完成测试' : '下一题' }}
+        {{ isLastQuestion ? (isBigFiveMode ? '完成大五测评' : '进入大五测评') : '下一题' }}
       </button>
     </view>
   </view>
@@ -79,19 +79,6 @@ function selectOption(index: number) {
   }
 }
 
-function describeMbtiProfile(): string {
-  const profile = personaStore.mbtiProfile
-  if (!profile || !profile.scores) return ''
-  const s = profile.scores
-  const dims = [
-    { name: 'E/I', value: s.E, pos: '外向', neg: '内向' },
-    { name: 'S/N', value: s.S, pos: '感觉', neg: '直觉' },
-    { name: 'T/F', value: s.T, pos: '思考', neg: '情感' },
-    { name: 'J/P', value: s.J, pos: '判断', neg: '感知' },
-  ]
-  return dims.map(d => `${d.value >= 50 ? d.pos : d.neg}(${d.value}%)`).join('，')
-}
-
 function describeBigFiveProfile(): string {
   const profile = personaStore.bigFiveProfile
   if (!profile || !profile.scores) return ''
@@ -126,20 +113,8 @@ function handleNext() {
       })
     } else {
       personaStore.completeMbtiTest()
-      uni.showModal({
-        title: '测试完成',
-        content: `你的MBTI类型是：${personaStore.userMbti}\n维度强度：${describeMbtiProfile()}\n测试置信度：${personaStore.mbtiProfile?.confidence || 0}%\n\n继续完成大五人格测评，可以更精准地构建互补人格。`,
-        confirmText: '继续大五测评',
-        cancelText: '稍后',
-        success: (res) => {
-          if (res.confirm) {
-            uni.navigateTo({
-              url: '/pages/mbti-test/index?mode=bigfive'
-            })
-          } else {
-            uni.navigateBack()
-          }
-        }
+      uni.navigateTo({
+        url: '/pages/mbti-test/index?mode=bigfive'
       })
     }
   } else {

@@ -171,6 +171,10 @@
         {{ startBtnText }}
       </button>
       <text class="tips">无需注册 · 免费体验 · 随时开始</text>
+      <view class="settings-entry" @click="goToSettings">
+        <text class="settings-entry-icon">⚙</text>
+        <text>AI 服务设置</text>
+      </view>
     </view>
 
     <view class="version-info">
@@ -240,6 +244,10 @@ function handleStart() {
     return
   }
   uni.navigateTo({ url: '/pages/persona-list/index' })
+}
+
+function goToSettings() {
+  uni.navigateTo({ url: '/pages/settings/index' })
 }
 </script>
 
@@ -1339,6 +1347,22 @@ function handleStart() {
   margin-top: 20rpx;
   font-size: 22rpx;
   color: rgba(255, 255, 255, 0.75);
+}
+
+.settings-entry {
+  margin-top: 28rpx;
+  padding: 16rpx 28rpx;
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  border-radius: 36rpx;
+  background: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 26rpx;
+}
+
+.settings-entry-icon {
+  font-size: 30rpx;
 }
 
 .version-info {
