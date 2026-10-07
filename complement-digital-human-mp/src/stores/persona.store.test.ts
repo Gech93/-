@@ -48,6 +48,35 @@ describe('persona store 核心逻辑', () => {
     expect((saved.personas as Array<{ id: string }>)[0].id).toBe(persona!.id)
   })
 
+  it('同一套测评结果可创建不同互补度的人格并生成独立画像', async () => {
+    const { usePersonaStore } = await loadStore()
+    const store = usePersonaStore()
+    store.userMbti = 'INTJ'
+    store.mbtiProfile = makeMbtiProfile()
+    store.bigFiveProfile = {
+      scores: { O: 35, C: 70, E: 30, A: 60, N: 65 },
+      confidence: 80,
+      descriptions: {
+        O: '务实传统(35)',
+        C: '严谨自律(70)',
+        E: '内敛沉静(30)',
+        A: '温和合作(60)',
+        N: '细腻敏感(65)',
+      },
+    }
+
+    const similar = store.createPersona('相似形象', undefined, 20)
+    const complementary = store.createPersona('互补形象', undefined, 80)
+
+    expect(store.personas).toHaveLength(2)
+    expect(similar?.mbtiScores).toEqual(complementary?.mbtiScores)
+    expect(similar?.bigFiveScores).toEqual(complementary?.bigFiveScores)
+    expect(similar?.complementLevel).toBe(20)
+    expect(complementary?.complementLevel).toBe(80)
+    expect(similar?.complementMbti).not.toBe(complementary?.complementMbti)
+    expect(similar?.complementBigFive).not.toEqual(complementary?.complementBigFive)
+  })
+
   it('达到人格上限后无法继续创建', async () => {
     const { usePersonaStore } = await loadStore()
     const store = usePersonaStore()
