@@ -94,9 +94,26 @@ export function readModels(getStorage: (key: string) => unknown): UserModelConfi
   return sanitizeModels(raw)
 }
 
-// 实际参与直连 failover 的模型：启用 且有 Key、模型名与接口地址
+// 推理类模型响应显著偏慢，会拉高首字等待；判定为慢模型
+export function isReasoningModel(model: unknown): boolean {
+  if (typeof model !== 'string' || !model) return false
+  return model === 'deepseek-reasoner' || model.startsWith('o1-') || model.startsWith('o3-') || model.includes('reasoner')
+}
+
+// 快速模型优先：把推理类慢模型稳定挪到兜底位置，其余保持用户手动排序（设置页 ↑↓）
+export function prioritizeModels(models: UserModelConfig[]): UserModelConfig[] {
+  const fast: UserModelConfig[] = []
+  const slow: UserModelConfig[] = []
+  for (const m of models) {
+    if (isReasoningModel(m.model)) slow.push(m)
+    else fast.push(m)
+  }
+  return [...fast, ...slow]
+}
+
+// 实际参与直连 failover 的模型：启用 且有 Key、模型名与接口地址，并让快速模型优先
 export function usableModels(models: UserModelConfig[]): UserModelConfig[] {
-  return models.filter((m) => m.enabled && !!m.apiKey.trim() && !!m.model && !!m.baseUrl)
+  return prioritizeModels(models.filter((m) => m.enabled && !!m.apiKey.trim() && !!m.model && !!m.baseUrl))
 }
 
 export function readGatewayConfig(getStorage: (key: string) => unknown): GatewayConfig {

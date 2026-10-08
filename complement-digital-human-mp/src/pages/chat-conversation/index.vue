@@ -42,7 +42,7 @@
           <text>{{ personaMbti }}</text>
         </view>
         <view class="message-content">
-          <template v-if="msg.role === 'assistant' && msg.structured">
+          <template v-if="msg.role === 'assistant' && msg.structured && !msg.streaming">
             <text class="message-text">{{ msg.structured.perspective }}</text>
             <view class="suggestion-list" v-if="msg.structured.suggestions.length">
               <view class="suggestion-item" v-for="(s, i) in msg.structured.suggestions" :key="i">
@@ -60,8 +60,11 @@
           </template>
           <template v-else>
             <text class="message-text">{{ msg.content }}</text>
+            <view class="retry-row" v-if="msg.retry">
+              <text class="retry-btn" @click="handleRetry(msg)">↻ 重试</text>
+            </view>
           </template>
-          <text class="message-time">{{ formatTime(msg.timestamp) }}</text>
+          <text class="message-time" v-if="!msg.streaming">{{ formatTime(msg.timestamp) }}</text>
         </view>
       </view>
 
@@ -71,6 +74,10 @@
           <view class="typing-dot"></view>
           <view class="typing-dot"></view>
         </view>
+      </view>
+
+      <view class="slow-hint" v-if="showSlowHint">
+        <text class="slow-hint-text">模型思考中，请稍等…… 若长时间无响应，可等待自动切换备用模型</text>
       </view>
     </scroll-view>
 
@@ -155,6 +162,8 @@ interface Message {
   content: string
   timestamp: Date
   structured?: StructuredReply
+  streaming?: boolean
+  retry?: boolean
 }
 
 const personaStore = usePersonaStore()
@@ -162,10 +171,14 @@ const personaStore = usePersonaStore()
 const messages = ref<Message[]>([])
 const inputText = ref('')
 const isTyping = ref(false)
+const showSlowHint = ref(false)
 const scrollTop = ref(0)
 const complementLevel = ref(50)
 const personaName = ref('数字人')
 const personaMbti = ref('AI')
+
+let slowTimer: ReturnType<typeof setTimeout> | null = null
+let pendingRetry: { text: string; history: Array<{ role: 'user' | 'assistant'; content: string }> } | null = null
 
 const showApiKeyModal = ref(false)
 const aiReady = ref(false)
@@ -274,7 +287,7 @@ async function handleSend() {
   if (!text) return
 
   inputText.value = ''
-  
+
   const userMsg: Message = {
     id: Date.now().toString(),
     role: 'user',
@@ -283,13 +296,61 @@ async function handleSend() {
   }
   messages.value.push(userMsg)
   saveMessages()
-  
+
+  await sendMessage(text, buildHistory())
+}
+
+function buildHistory(): Array<{ role: 'user' | 'assistant'; content: string }> {
+  return messages.value.slice(-7, -1).map(m => ({
+    role: m.role,
+    content: m.content,
+  }))
+}
+
+// 流式渲染清洗：把正在累积的 JSON 原文转成可读文本。完整 JSON 时取 perspective，未完整时剥掉骨架保留增量内容
+function scrubStreamText(full: string): string {
+  try {
+    const parsed = JSON.parse(full)
+    if (typeof parsed?.perspective === 'string') return parsed.perspective
+  } catch (e) {
+    // JSON 尚未收全，走增量清洗
+  }
+  const marker = '{"perspective":"'
+  if (full.startsWith(marker)) {
+    const rest = full.slice(marker.length)
+    const end = rest.search(/"\s*(,|})/)
+    return (end >= 0 ? rest.slice(0, end) : rest).replace(/\\n/g, '\n').replace(/\\"/g, '"')
+  }
+  return full.replace(/[{}"\\[\],]/g, '')
+}
+
+function startSlowTimer() {
+  stopSlowTimer()
+  slowTimer = setTimeout(() => {
+    showSlowHint.value = true
+    scrollToBottom()
+  }, 8000)
+}
+
+function stopSlowTimer() {
+  if (slowTimer) {
+    clearTimeout(slowTimer)
+    slowTimer = null
+  }
+  showSlowHint.value = false
+}
+
+async function sendMessage(text: string, history: Array<{ role: 'user' | 'assistant'; content: string }>) {
   isTyping.value = true
+  pendingRetry = { text, history }
   scrollToBottom()
+
+  let aiStreamFull = ''
+  let aiMsg: Message | null = null
 
   try {
     let response: ChatResponse
-    
+
     if (aiReady.value) {
       const ctx: PromptContext = {
         persona: personaStore.activePersona,
@@ -298,24 +359,46 @@ async function handleSend() {
         bigFiveProfile: personaStore.bigFiveProfile,
         lastUserText: text,
       }
-      // 注入最近最多 6 条历史（不含当前这条用户消息）
-      const history = messages.value.slice(-7, -1).map(m => ({
-        role: m.role,
-        content: m.content,
-      }))
-      response = await callDeepSeekAPI({ userMessage: text, ctx, history })
+
+      aiMsg = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: '',
+        timestamp: new Date(),
+        streaming: true,
+      }
+      messages.value.push(aiMsg)
+      scrollToBottom()
+      startSlowTimer()
+
+      response = await callDeepSeekAPI({
+        userMessage: text,
+        ctx,
+        history,
+        onText: (t) => {
+          if (showSlowHint.value) stopSlowTimer()
+          aiStreamFull += t
+          if (aiMsg) aiMsg.content = scrubStreamText(aiStreamFull)
+          scrollToBottom()
+        },
+      })
+
+      if (aiMsg) {
+        aiMsg.streaming = false
+        aiMsg.content = response.text
+        aiMsg.structured = response.structured
+      }
     } else {
       response = generateMockResponse(text)
+      const mockMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: response.text,
+        timestamp: new Date(),
+        structured: response.structured,
+      }
+      messages.value.push(mockMsg)
     }
-    
-    const aiMsg: Message = {
-      id: (Date.now() + 1).toString(),
-      role: 'assistant',
-      content: response.text,
-      timestamp: new Date(),
-      structured: response.structured,
-    }
-    messages.value.push(aiMsg)
     saveMessages()
 
     // 记忆层：优先应用 AI 抽取的 memoryUpdates（事实/滚动摘要/行为画像），缺失或无结果时回退旧规则
@@ -344,18 +427,32 @@ async function handleSend() {
     }
   } catch (error) {
     console.error('AI 回复失败:', error)
+    if (aiMsg) {
+      const streamIdx = messages.value.indexOf(aiMsg)
+      if (streamIdx >= 0) messages.value.splice(streamIdx, 1)
+    }
     const errorMsg: Message = {
       id: (Date.now() + 1).toString(),
       role: 'assistant',
-      content: '抱歉，AI 回复失败了。你可以稍后重试，或检查 API Key 设置。',
+      content: '抱歉，AI 回复失败了。你可以点击下方"重试"再次尝试，或检查 API Key 设置。',
       timestamp: new Date(),
+      retry: true,
     }
     messages.value.push(errorMsg)
     saveMessages()
   } finally {
     isTyping.value = false
+    stopSlowTimer()
     scrollToBottom()
   }
+}
+
+function handleRetry(msg: Message) {
+  if (!pendingRetry) return
+  const idx = messages.value.indexOf(msg)
+  if (idx >= 0) messages.value.splice(idx, 1)
+  saveMessages()
+  sendMessage(pendingRetry.text, pendingRetry.history)
 }
 
 // ---------- 记忆层 ----------
@@ -695,6 +792,37 @@ function goBack() {
   display: flex;
   align-items: center;
   margin-bottom: 40rpx;
+}
+
+.slow-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 40rpx;
+  padding: 20rpx 32rpx;
+  background: rgba(255, 193, 7, 0.12);
+  border: 1rpx solid rgba(255, 193, 7, 0.4);
+  border-radius: 32rpx;
+}
+
+.slow-hint-text {
+  font-size: 26rpx;
+  color: var(--dopamine-yellow);
+  text-align: center;
+  line-height: 1.5;
+}
+
+.retry-row {
+  display: flex;
+  margin-top: 24rpx;
+}
+
+.retry-btn {
+  padding: 12rpx 32rpx;
+  border-radius: 32rpx;
+  background: var(--dopamine-primary);
+  color: var(--dopamine-card);
+  font-size: 26rpx;
 }
 
 .typing-dots {

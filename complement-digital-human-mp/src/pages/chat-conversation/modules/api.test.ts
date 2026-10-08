@@ -44,7 +44,7 @@ function makeDeps(overrides: Partial<ApiDeps> = {}): ApiDeps {
     overrides.request ||
     vi.fn((_options: RequestOptions) => Promise.resolve({ statusCode: 200, data: {} }))
   const getStorage = overrides.getStorage || makeGetter({})
-  return { request, getStorage }
+  return { request, getStorage, supportsChunked: false, ...overrides }
 }
 
 afterEach(() => {
@@ -282,5 +282,89 @@ describe('callDeepSeekAPI: 多模型 failover', () => {
     const gwCall = (mock.mock.calls[0] as [RequestOptions])[0]
     expect(gwCall.url).toBe('https://gateway.example.com/chat')
     expect(gwCall.data).toMatchObject({ model: 'deepseek-chat', provider: 'deepseek' })
+  })
+})
+
+// 构造一条 OpenAI 风格 SSE 行（delta 增量文本为 text），自动转义避免手写 JSON 出错
+function sseLine(deltaText: string): string {
+  return `data: ${JSON.stringify({ choices: [{ delta: { content: deltaText } }] })}\n`
+}
+
+describe('callDeepSeekAPI: 流式分块', () => {
+  it('supportsChunked 时直连请求携带 stream:true 且回调收到增量文本', async () => {
+    const fullText = JSON.stringify({
+      perspective: '你好，欢迎来到互补对话',
+      suggestions: [],
+      followUpQuestion: '',
+    })
+    const cut = Math.ceil(fullText.length / 2)
+    const request = vi.fn((_options: RequestOptions, onChunk?: (chunk: string) => void) => {
+      if (onChunk) {
+        onChunk(sseLine(fullText.slice(0, cut)) + '\n')
+        onChunk(sseLine(fullText.slice(cut)) + '\n')
+        onChunk('data: [DONE]\n\n')
+      }
+      return Promise.resolve({ statusCode: 200, data: {} })
+    })
+    const received: string[] = []
+    const deps = makeDeps({
+      request: request as ApiDeps['request'],
+      getStorage: makeGetter({ ai_models: [makeModel()] }),
+      supportsChunked: true,
+    })
+    const mock = request
+
+    const result = await callDeepSeekAPI({
+      userMessage: 'hi',
+      ctx: makeCtx(),
+      history: [],
+      deps,
+      onText: (t) => received.push(t),
+    })
+
+    expect(mock).toHaveBeenCalledTimes(1)
+    const call = (mock.mock.calls[0] as [RequestOptions])[0]
+    expect(call.data).toMatchObject({ model: 'deepseek-chat', stream: true })
+    expect(call.enableChunked).toBe(true)
+    expect(received.join('')).toBe(fullText)
+    expect(result.structured?.perspective).toBe('你好，欢迎来到互补对话')
+  })
+
+  it('SSE 行被底层分块从中间切开时仍能正确重组内容', async () => {
+    const line1 = sseLine('{"perspective":"先从')
+    const line2 = sseLine('情绪入手","suggestions":[],"followUpQuestion":""}')
+    const cut = Math.floor(line1.length / 2)
+    const deps = makeDeps({
+      request: ((_options: RequestOptions, onChunk?: (chunk: string) => void) => {
+        if (onChunk) {
+          onChunk(line1.slice(0, cut))
+          onChunk(line1.slice(cut) + line2)
+          onChunk('data: [DONE]\n\n')
+        }
+        return Promise.resolve({ statusCode: 200, data: {} })
+      }) as ApiDeps['request'],
+      getStorage: makeGetter({ ai_models: [makeModel()] }),
+      supportsChunked: true,
+    })
+
+    const result = await callDeepSeekAPI({ userMessage: 'hi', ctx: makeCtx(), history: [], deps })
+
+    expect(result.structured?.perspective).toBe('先从情绪入手')
+  })
+
+  it('supportsChunked 为 false 时保持非流式请求且正常返回', async () => {
+    const request = vi.fn()
+    const deps = makeDeps({
+      request: request as ApiDeps['request'],
+      getStorage: makeGetter({ ai_models: [makeModel()] }),
+    })
+    const mock = request as ReturnType<typeof vi.fn>
+    mock.mockResolvedValueOnce({ statusCode: 200, data: { choices: [{ message: { content } }] } })
+
+    const result = await callDeepSeekAPI({ userMessage: 'hi', ctx: makeCtx(), history: [], deps })
+
+    const call = (mock.mock.calls[0] as [RequestOptions])[0]
+    expect(call.data).toMatchObject({ model: 'deepseek-chat', stream: false })
+    expect(result.text).toContain('先看见情绪')
   })
 })

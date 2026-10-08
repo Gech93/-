@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   defaultModels,
   hasUsableAi,
+  isReasoningModel,
+  prioritizeModels,
   readGatewayConfig,
   readModels,
   resolveProvider,
@@ -80,6 +82,26 @@ describe('models: 多模型配置数据结构', () => {
     const usable = usableModels(list)
     expect(usable).toHaveLength(1)
     expect(usable[0].model).toBe('a')
+  })
+
+  it('isReasoningModel 判定推理类慢模型', () => {
+    expect(isReasoningModel('deepseek-reasoner')).toBe(true)
+    expect(isReasoningModel('o1-mini')).toBe(true)
+    expect(isReasoningModel('o3-pro')).toBe(true)
+    expect(isReasoningModel('deepseek-chat')).toBe(false)
+    expect(isReasoningModel('glm-4-plus')).toBe(false)
+    expect(isReasoningModel('')).toBe(false)
+  })
+
+  it('prioritizeModels 把推理类慢模型稳定挪到末尾，快速模型保持原顺序', () => {
+    const list: UserModelConfig[] = [
+      { name: 'A', model: 'glm-4-plus', baseUrl: 'u', apiKey: 'k', jsonMode: true, enabled: true },
+      { name: 'B', model: 'deepseek-reasoner', baseUrl: 'u', apiKey: 'k', jsonMode: true, enabled: true },
+      { name: 'C', model: 'deepseek-chat', baseUrl: 'u', apiKey: 'k', jsonMode: true, enabled: true },
+      { name: 'D', model: 'o1-mini', baseUrl: 'u', apiKey: 'k', jsonMode: true, enabled: true },
+    ]
+    const sorted = prioritizeModels(list)
+    expect(sorted.map(m => m.model)).toEqual(['glm-4-plus', 'deepseek-chat', 'deepseek-reasoner', 'o1-mini'])
   })
 
   it('resolveProvider 与 supportsJsonMode 按模型推断', () => {
