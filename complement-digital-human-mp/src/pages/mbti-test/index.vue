@@ -9,6 +9,10 @@
       <view class="progress-fill" :style="{ width: progressWidth }"></view>
     </view>
 
+    <view class="disclaimer-bar" v-if="currentQuestionIndex === 0">
+      <text class="disclaimer-text">轻量自评体验 · 结果由自研算法基于自评生成，仅供自我探索参考，不构成专业心理评估</text>
+    </view>
+
     <view class="question-card">
       <text class="question-icon">💡</text>
       <text class="question-text">{{ currentQuestion.question }}</text>
@@ -97,8 +101,8 @@ function handleNext() {
     if (isBigFiveMode.value) {
       personaStore.completeBigFiveTest()
       uni.showModal({
-        title: '大五测评完成',
-        content: `你的大五人格画像：\n${describeBigFiveProfile()}\n画像置信度：${personaStore.bigFiveProfile?.confidence || 0}%\n\n现在创建你的第一个互补数字人吗？`,
+        title: '测评完成',
+        content: `你的测评成果：\n\nMBTI：${personaStore.userMbti || '未知'}（置信度 ${personaStore.mbtiProfile?.confidence || 0}%）\n大五人格画像：\n${describeBigFiveProfile()}\n画像置信度：${personaStore.bigFiveProfile?.confidence || 0}%\n\n以上结果基于自评与轻量算法生成，仅供自我探索参考，不构成专业心理评估。\n\n现在创建你的第一个互补数字人吗？`,
         confirmText: '创建',
         cancelText: '稍后',
         success: (res) => {
@@ -277,5 +281,19 @@ function goBack() {
 .next-btn[disabled] {
   background: rgba(255, 255, 255, 0.5);
   color: rgba(255, 107, 157, 0.5);
+}
+
+.disclaimer-bar {
+  background: rgba(255, 255, 255, 0.35);
+  border-radius: 20rpx;
+  padding: 20rpx 28rpx;
+  margin-bottom: 32rpx;
+}
+
+.disclaimer-text {
+  display: block;
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.5;
 }
 </style>
